@@ -1,6 +1,6 @@
 import type { TrueForgeApi } from "@truefoundry/trueforge-sdk";
 import { rememberPendingApproval, rememberToolCall, getConversation } from "./store";
-import type { AgentEvent } from "../types";
+import type { AgentEvent, ThinkingStep } from "../types";
 
 type TurnStreamingEvent = TrueForgeApi.TurnStreamingEvent;
 
@@ -13,12 +13,30 @@ type TurnStreamingEvent = TrueForgeApi.TurnStreamingEvent;
  * message, and the resume lands on a new one — see components/harness/agent-harness.tsx).
  */
 export type StreamContext = {
-  deltaByIndex: Map<number, { id?: string; name: string; args: string }>;
+  /** Keyed `threadId:index` — subagents run concurrently and each restarts its own
+   *  tool-call index numbering, so an index alone collides across threads. */
+  deltaByIndex: Map<string, { id?: string; name: string; args: string }>;
   emittedToolCalls: Set<string>;
+  /** Subagent lanes, keyed by threadId, rendered as thinking steps. */
+  subagents: Map<string, ThinkingStep>;
 };
 
 export function createStreamContext(): StreamContext {
-  return { deltaByIndex: new Map(), emittedToolCalls: new Set() };
+  return { deltaByIndex: new Map(), emittedToolCalls: new Set(), subagents: new Map() };
+}
+
+/** Re-emit every lane whenever one changes; the UI renders the whole list. */
+function emitSubagentLanes(ctx: StreamContext, emit: (event: AgentEvent) => void) {
+  const steps = [...ctx.subagents.values()];
+  if (steps.length === 0) return;
+  const running = steps.filter((s) => s.status === "running").length;
+  emit({
+    type: "thinking",
+    data: {
+      label: running > 0 ? `Researching · ${running} in parallel` : "Research complete",
+      steps,
+    },
+  });
 }
 
 function describeApproval(name: string | undefined, args: string | undefined) {
@@ -113,20 +131,29 @@ export function mapTurnEvent(
     }
 
     case "model.message.delta": {
-      if (event.content) emit({ type: "token", data: { text: event.content } });
+      // Subagents stream their own reasoning on their own threads. Only the root
+      // agent's text is the user-facing reply — emitting subagent prose here would
+      // interleave several agents into a single stream of tokens.
+      if (event.content && event.threadId === "main") {
+        emit({ type: "token", data: { text: event.content } });
+      }
 
       for (const call of event.toolCalls ?? []) {
-        let entry = ctx.deltaByIndex.get(call.index);
+        // Namespace by thread: with dynamic subagents several streams are live at once
+        // and they commonly both start at index 0, which would otherwise overwrite or
+        // concatenate one call's name and arguments into another's.
+        const key = `${event.threadId}:${call.index}`;
+        let entry = ctx.deltaByIndex.get(key);
         // A new id at an already-used index means a new tool call started there (the
         // model can make several sequential tool calls, each restarting index numbering) —
         // start a fresh accumulator rather than appending onto the previous call's text.
         if (call.id && entry?.id !== call.id) {
           entry = { id: call.id, name: "", args: "" };
-          ctx.deltaByIndex.set(call.index, entry);
+          ctx.deltaByIndex.set(key, entry);
         }
         if (!entry) {
           entry = { name: "", args: "" };
-          ctx.deltaByIndex.set(call.index, entry);
+          ctx.deltaByIndex.set(key, entry);
         }
         if (call.function?.name) entry.name += call.function.name;
         if (call.function?.arguments) entry.args += call.function.arguments;
@@ -192,6 +219,27 @@ export function mapTurnEvent(
             images: imagePost.images,
           },
         });
+      }
+      return;
+    }
+
+    case "thread.created": {
+      ctx.subagents.set(event.threadId, {
+        id: event.threadId,
+        label: event.title || "Subagent",
+        detail: event.agentInfo?.input?.slice(0, 140),
+        status: "running",
+      });
+      emitSubagentLanes(ctx, emit);
+      return;
+    }
+
+    case "thread.done": {
+      const lane = ctx.subagents.get(event.threadId);
+      if (lane) {
+        lane.status = "done";
+        if (event.state?.status === "error") lane.detail = "failed";
+        emitSubagentLanes(ctx, emit);
       }
       return;
     }

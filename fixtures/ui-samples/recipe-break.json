@@ -1,0 +1,33 @@
+{
+  "kind": "recipe.break",
+  "recipe": "competitor-blog",
+  "version": 1,
+  "url": "https://www.vapi.ai/blog/introducing-realtime-voice-agents",
+  "failures": [
+    {
+      "field": "title",
+      "selector": "h1.post-title",
+      "matched": 0,
+      "reason": "selector matched no elements — the page structure has probably changed"
+    },
+    {
+      "field": "published",
+      "selector": "time.post-date",
+      "matched": 0,
+      "reason": "selector matched no elements — the page structure has probably changed"
+    },
+    {
+      "field": "body",
+      "selector": ".post-content",
+      "matched": 0,
+      "reason": "selector matched no elements — the page structure has probably changed"
+    },
+    {
+      "field": "reactions",
+      "selector": "[data-reactions]",
+      "matched": 0,
+      "reason": "selector matched no elements — the page structure has probably changed"
+    }
+  ],
+  "partial": {}
+}

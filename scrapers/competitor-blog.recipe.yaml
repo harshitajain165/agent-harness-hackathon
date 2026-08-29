@@ -1,0 +1,42 @@
+# Competitor launch-post scraper.
+#
+# Version 1 selectors, written against the page as it looked in fixtures/competitor-blog.v1.html.
+# When the page is redesigned these stop matching, extract_with_recipe reports exactly which
+# ones broke, and Nolan proposes a v2 — reviewed by a human, then committed here.
+name: competitor-blog
+version: 1
+target: Competitor product-launch blog post
+url_pattern: "https://*/blog/*"
+
+fetch:
+  tool: scrape_as_html
+
+extract:
+  title:
+    selector: "h1.post-title"
+  published:
+    selector: "time.post-date"
+    as: attr
+    attr: datetime
+  author:
+    selector: ".post-author"
+    optional: true
+  body:
+    selector: ".post-content"
+  reactions:
+    selector: "[data-reactions]"
+    as: number
+
+assertions:
+  - field: title
+    rule: non_empty
+  - field: body
+    rule: min_length
+    value: 200
+  - field: reactions
+    rule: is_number
+  - field: published
+    rule: matches
+    value: "^\\d{4}-\\d{2}-\\d{2}$"
+
+fixture: fixtures/competitor-blog.v1.html

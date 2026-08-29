@@ -1,0 +1,77 @@
+{
+  "kind": "diff",
+  "title": "Repair competitor-blog (v1 → v2)",
+  "files": [
+    {
+      "path": "scrapers/competitor-blog.recipe.yaml",
+      "added": 5,
+      "removed": 5,
+      "lines": [
+        {
+          "text": "name: competitor-blog",
+          "tone": "ctx"
+        },
+        {
+          "text": "version: 1",
+          "tone": "del"
+        },
+        {
+          "text": "version: 2",
+          "tone": "add"
+        },
+        {
+          "text": "extract:",
+          "tone": "ctx"
+        },
+        {
+          "text": "  title:",
+          "tone": "ctx"
+        },
+        {
+          "text": "    selector: \"h1.post-title\"",
+          "tone": "del"
+        },
+        {
+          "text": "    selector: \"[data-testid=\"entry-title\"]\"",
+          "tone": "add"
+        },
+        {
+          "text": "  published:",
+          "tone": "ctx"
+        },
+        {
+          "text": "    selector: \"time.post-date\"",
+          "tone": "del"
+        },
+        {
+          "text": "    selector: \"[data-testid=\"entry-date\"]\"",
+          "tone": "add"
+        },
+        {
+          "text": "  body:",
+          "tone": "ctx"
+        },
+        {
+          "text": "    selector: \".post-content\"",
+          "tone": "del"
+        },
+        {
+          "text": "    selector: \"[data-testid=\"entry-body\"]\"",
+          "tone": "add"
+        },
+        {
+          "text": "  reactions:",
+          "tone": "ctx"
+        },
+        {
+          "text": "    selector: \"[data-reactions]\"",
+          "tone": "del"
+        },
+        {
+          "text": "    selector: \"[data-testid=\"reaction-count\"]\"",
+          "tone": "add"
+        }
+      ]
+    }
+  ]
+}

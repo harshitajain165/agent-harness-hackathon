@@ -1,0 +1,12 @@
+{
+  "kind": "recipe.repair_applied",
+  "recipe": "competitor-blog",
+  "version": 2,
+  "path": "scrapers/competitor-blog.recipe.yaml",
+  "fieldsRecovered": [
+    "title",
+    "published",
+    "body",
+    "reactions"
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "_note": "Seeded subscription data standing in for Stripe. Attribution keys on metadata.video_id, matching lib/stripe/attributed-revenue.ts, so the live Stripe source is a drop-in replacement rather than a second scheme.",
+  "subscriptions": [
+    {
+      "id": "sub_1001",
+      "customerId": "cus_1001",
+      "plan": "scale",
+      "mrr": 999,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-06-29T18:45:21.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
+      }
+    },
+    {
+      "id": "sub_1002",
+      "customerId": "cus_1002",
+      "plan": "growth",
+      "mrr": 199,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-07-15T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
+      }
+    },
+    {
+      "id": "sub_1003",
+      "customerId": "cus_1003",
+      "plan": "growth",
+      "mrr": 199,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-08-18T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
+      }
+    },
+    {
+      "id": "sub_1004",
+      "customerId": "cus_1004",
+      "plan": "starter",
+      "mrr": 49,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-07-11T18:45:21.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
+      }
+    },
+    {
+      "id": "sub_1005",
+      "customerId": "cus_1005",
+      "plan": "growth",
+      "mrr": 199,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-07-21T22:20:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
+      }
+    },
+    {
+      "id": "sub_1006",
+      "customerId": "cus_1006",
+      "plan": "growth",
+      "mrr": 199,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-07-15T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
+      }
+    },
+    {
+      "id": "sub_1007",
+      "customerId": "cus_1007",
+      "plan": "starter",
+      "mrr": 49,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-08-18T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
+      }
+    },
+    {
+      "id": "sub_1008",
+      "customerId": "cus_1008",
+      "plan": "starter",
+      "mrr": 49,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-07-13T22:20:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
+      }
+    },
+    {
+      "id": "sub_1009",
+      "customerId": "cus_1009",
+      "plan": "starter",
+      "mrr": 49,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-06-12T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
+      }
+    },
+    {
+      "id": "sub_1010",
+      "customerId": "cus_1010",
+      "plan": "starter",
+      "mrr": 49,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-07-15T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
+      }
+    },
+    {
+      "id": "sub_1011",
+      "customerId": "cus_1011",
+      "plan": "growth",
+      "mrr": 199,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-08-18T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
+      }
+    },
+    {
+      "id": "sub_1012",
+      "customerId": "cus_1012",
+      "plan": "starter",
+      "mrr": 49,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-06-21T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
+      }
+    },
+    {
+      "id": "sub_1013",
+      "customerId": "cus_1013",
+      "plan": "starter",
+      "mrr": 49,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-07-24T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
+      }
+    },
+    {
+      "id": "sub_1014",
+      "customerId": "cus_1014",
+      "plan": "growth",
+      "mrr": 199,
+      "currency": "usd",
+      "status": "active",
+      "createdAt": "2026-08-27T10:00:00.000Z",
+      "metadata": {
+        "utm_medium": "video",
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
+      }
+    }
+  ]
+}

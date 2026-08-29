@@ -5,6 +5,10 @@ import { z } from "zod";
 import { createImagePost, type Slide } from "@/lib/tools/create-image-post";
 import { inspectPage } from "@/lib/tools/inspect-page";
 import { recordDemo, type RecordStep } from "@/lib/tools/record-demo";
+import { extractVideoFeatures, summariseForAgent } from "@/lib/scrapers/analyze";
+import { normalizeLinkedInPost, normalizeXPost, freshness } from "@/lib/scrapers/normalize";
+import { attributeRevenue, revenueHeadline } from "@/lib/scrapers/attribution";
+import { attributionToRecords } from "@/lib/scrapers/artifacts";
 
 export const runtime = "nodejs";
 
@@ -22,6 +26,10 @@ export const runtime = "nodejs";
  * - `publish_post` (`destructiveHint: true`, so TrueForge's default
  *   `require_approval_for_tools` pauses the turn for it): still a stub — writes to an
  *   in-memory outbox. Real distribution (actually posting somewhere) is a later phase.
+ * - `analyze_video`, `normalize_post`, `revenue_by_video` (all `readOnlyHint`): the
+ *   competitor-analysis half. These deliberately do not call Bright Data themselves —
+ *   the agent fetches through the Bright Data connector and passes payloads in here,
+ *   so the harness owns the credential and the tool call is visible in the trace.
  */
 
 const httpUrl = z
@@ -177,6 +185,94 @@ function buildServer() {
       outbox.push({ post, publishedAt: new Date().toISOString() });
       return {
         content: [{ type: "text", text: `Published to the local outbox (${outbox.length} total).` }],
+      };
+    }
+  );
+
+  // --- competitor analysis -------------------------------------------------
+  // These take data the agent already fetched via the Bright Data connector and
+  // turn it into measurements. Deliberately split: the numbers are computed here,
+  // the interpretation is the agent's, so nothing numeric on screen is generated.
+
+  server.registerTool(
+    "analyze_video",
+    {
+      description:
+        "Measure a competitor video from its transcript and duration: pacing, how many " +
+        "words of preamble before substance, filler openers, numeric claims, call to " +
+        "action. Returns a compact brief — pass the transcript from web_data_youtube_videos.",
+      inputSchema: {
+        title: z.string(),
+        url: z.string(),
+        transcript: z.string().describe("Full transcript from web_data_youtube_videos"),
+        durationSeconds: z.number().describe("video_length, in seconds"),
+        transcriptTruncated: z
+          .boolean()
+          .optional()
+          .describe("Set when the transcript is known to be partial; pace is then withheld"),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ title, url, transcript, durationSeconds, transcriptTruncated }) => {
+      const features = extractVideoFeatures(transcript, durationSeconds, transcriptTruncated ?? false);
+      return {
+        content: [{ type: "text", text: summariseForAgent(title, url, features) }],
+      };
+    }
+  );
+
+  server.registerTool(
+    "normalize_post",
+    {
+      description:
+        "Reduce a raw Bright Data post payload to the fields that matter: author, hook, " +
+        "engagement, and derived metrics. A raw LinkedIn post is ~50KB of which most is " +
+        "other people's comments — pass the payload here rather than reasoning over it.",
+      inputSchema: {
+        platform: z.enum(["linkedin", "x"]),
+        payload: z.string().describe("The raw JSON payload from web_data_* as a string"),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ platform, payload }) => {
+      try {
+        const raw = JSON.parse(payload);
+        const record = Array.isArray(raw) ? raw[0] : raw;
+        const post = platform === "x" ? normalizeXPost(record) : normalizeLinkedInPost(record);
+        return {
+          content: [
+            { type: "text", text: JSON.stringify({ ...post, readAs: freshness(post) }, null, 2) },
+          ],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "could not parse payload";
+        return { content: [{ type: "text", text: `normalize_post failed: ${message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "revenue_by_video",
+    {
+      description:
+        "Revenue attributed to each published video: customers, MRR, and MRR per 1,000 " +
+        "views. Use this to compare videos on what they earned rather than on reach.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const rows = attributeRevenue();
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { headline: revenueHeadline(rows), rows, artifact: attributionToRecords(rows) },
+              null,
+              2
+            ),
+          },
+        ],
       };
     }
   );

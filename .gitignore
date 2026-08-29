@@ -48,3 +48,4 @@ next-env.d.ts
 
 # TTS narration cache and other private (non-public-served) generated artifacts
 /artifacts/
+package-lock.json

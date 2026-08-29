@@ -1,0 +1,34 @@
+{
+  "id": "2070488587867505003",
+  "platform": "x",
+  "url": "https://x.com/smallest_AI/status/2070488587867505003",
+  "author": {
+    "name": "smallest.ai",
+    "handle": "smallest_AI",
+    "avatarUrl": "https://pbs.twimg.com/profile_images/2082851001137299456/Dpw_BAjO_normal.jpg",
+    "followers": 9331
+  },
+  "postedAt": "2026-06-26T12:45:21.000Z",
+  "text": "Voice Agents can now join meetings. \n\nDrop a Google Meet, Zoom, or Teams link, and it shows up to hold the conversation in real time. \n\nLive now.",
+  "hook": "Voice Agents can now join meetings.",
+  "hashtags": [],
+  "media": [
+    "https://video.twimg.com/ext_tw_video/2070488543890219008/pu/vid/avc1/1282x720/2ORdxYbKqp6HXuyF.mp4?tag=12"
+  ],
+  "engagement": {
+    "likes": 19,
+    "comments": 2,
+    "reposts": 4,
+    "views": 1164,
+    "bookmarks": 5,
+    "total": 25
+  },
+  "metrics": {
+    "words": 27,
+    "hookLength": 36,
+    "hasMedia": true,
+    "hashtagCount": 0,
+    "engagementRate": 2.68,
+    "viewRate": 2.15
+  }
+}
