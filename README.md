@@ -50,13 +50,19 @@ in-memory outbox, pauses for approval via TrueForge's default `require_approval_
 the UI's `confirmation_required` / `/api/agent/confirm` round-trip already handles. Agent spec:
 `harness/agent-spec.ts`.
 
-`record_demo` (`lib/tools/record-demo.ts`) is a **real** recording: headless Playwright drives a
-fixed interaction (open Settings → switch agent preset → close) against a real local app and
-writes an actual `.webm` to `public/artifacts/`, which streams into the UI's video pane for real.
-Set `DEMO_APP_URL` and have that app running (defaults to `http://localhost:3100`) — no OS
-screen-recording permission or ffmpeg system dependency needed (Playwright's own `recordVideo`,
-no cursor). The interaction script is currently hardcoded, not agent-authored — a documented
-simplification, see the comment in `lib/tools/record-demo.ts`.
+`record_demo` (`lib/tools/record-demo.ts`) is a **real** recording, and it isn't limited to one
+pre-wired app: it takes any `http(s)` URL plus an **agent-authored** list of steps
+(click/type/press/wait/scroll), executes them with headless Playwright `recordVideo`, and writes
+an actual `.webm` to `public/artifacts/`, which streams into the UI's video pane for real. No OS
+screen-recording permission or ffmpeg system dependency needed — no visible cursor either (that's
+the real-capture path from `PROJECT_PLAN.md` §4, a later upgrade).
+
+Since the agent has no vision, it can't guess real selectors on a page it's never seen — that's
+what `inspect_page(url)` is for: it loads the page and returns its actual interactive elements
+with a usable selector for each (`harness/agent-spec.ts`'s instructions tell the agent to always
+call this first). `DEMO_APP_URL` (defaults to `http://localhost:3100`) is just the **suggested
+default target** when nobody names a URL — the agent can record any reachable app or site it's
+told to.
 
 `app/api/mcp/route.ts` is unauthenticated by default (frictionless for local dev), but it launches
 a real browser and writes real files on every `record_demo` call. Set `MCP_SECRET` to require a
