@@ -145,13 +145,13 @@ test('hashtags are recovered from X body text, which has no hashtags field', () 
 
 /* ---------- revenue attribution ---------- */
 
-test('revenue is attributed to the campaign carrying the utm_source', () => {
+test('revenue is attributed to the video carrying it in metadata.video_id', () => {
   const rows = attributeRevenue();
   assert.equal(rows.length, 3);
 
   for (const r of rows) {
     assert.equal(r.arr, r.mrr * 12);
-    assert.ok(r.conversions > 0, `${r.utmSource} should have conversions`);
+    assert.ok(r.conversions > 0, `${r.videoId} should have conversions`);
     assert.equal(r.revenuePerThousandViews, Number(((r.mrr / r.views) * 1000).toFixed(2)));
   }
 
@@ -163,14 +163,14 @@ test('revenue is attributed to the campaign carrying the utm_source', () => {
 test('churned subscriptions are not counted as revenue', () => {
   const source = {
     loadCampaigns: () => [{
-      utmSource: 'c1', title: 'T', url: 'u', platform: 'x',
+      videoId: 'c1', title: 'T', url: 'u', platform: 'x',
       publishedAt: '2026-01-01', durationSeconds: 30, views: 1000,
     }],
     loadSubscriptions: () => [
       { id: 's1', customerId: 'c', plan: 'growth', mrr: 199, currency: 'usd', status: 'active',
-        createdAt: '2026-01-02', metadata: { utm_source: 'c1' } },
+        createdAt: '2026-01-02', metadata: { video_id: 'c1' } },
       { id: 's2', customerId: 'd', plan: 'scale', mrr: 999, currency: 'usd', status: 'canceled',
-        createdAt: '2026-01-03', metadata: { utm_source: 'c1' } },
+        createdAt: '2026-01-03', metadata: { video_id: 'c1' } },
     ],
   };
   const [row] = attributeRevenue(source);

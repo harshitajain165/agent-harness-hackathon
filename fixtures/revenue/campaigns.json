@@ -1,8 +1,8 @@
 {
-  "_note": "Video campaigns. utmSource is what a subscription carries back, and what joins revenue to a video.",
+  "_note": "Video campaigns. videoId is what a Stripe subscription carries in metadata.video_id.",
   "campaigns": [
     {
-      "utmSource": "yt-voice-agents-meetings",
+      "videoId": "yt-voice-agents-meetings",
       "title": "Voice Agents can now join meetings",
       "url": "https://x.com/smallest_AI/status/2070488587867505003",
       "platform": "x",
@@ -11,7 +11,7 @@
       "views": 1164
     },
     {
-      "utmSource": "yt-voice-4-deep-dive",
+      "videoId": "yt-voice-4-deep-dive",
       "title": "Voice 4.0 architecture: a deep dive",
       "url": "https://www.youtube.com/watch?v=EXAMPLE-deep-dive",
       "platform": "youtube",
@@ -20,7 +20,7 @@
       "views": 8400
     },
     {
-      "utmSource": "yt-tts-benchmark",
+      "videoId": "yt-tts-benchmark",
       "title": "Fastest TTS: the benchmark, explained",
       "url": "https://www.youtube.com/watch?v=EXAMPLE-benchmark",
       "platform": "youtube",

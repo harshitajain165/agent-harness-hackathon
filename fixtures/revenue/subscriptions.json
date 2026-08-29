@@ -1,5 +1,5 @@
 {
-  "_note": "Seeded subscription data standing in for Stripe. Shape mirrors a Stripe subscription with UTM in metadata, so swapping in the live API is a source change, not a rewrite.",
+  "_note": "Seeded subscription data standing in for Stripe. Attribution keys on metadata.video_id, matching lib/stripe/attributed-revenue.ts, so the live Stripe source is a drop-in replacement rather than a second scheme.",
   "subscriptions": [
     {
       "id": "sub_1001",
@@ -10,9 +10,9 @@
       "status": "active",
       "createdAt": "2026-06-12T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-agents-meetings",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
       }
     },
     {
@@ -24,9 +24,9 @@
       "status": "active",
       "createdAt": "2026-07-15T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-agents-meetings",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
       }
     },
     {
@@ -38,9 +38,9 @@
       "status": "active",
       "createdAt": "2026-08-18T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-agents-meetings",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
       }
     },
     {
@@ -52,9 +52,9 @@
       "status": "active",
       "createdAt": "2026-06-21T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-agents-meetings",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-agents-meetings"
       }
     },
     {
@@ -66,9 +66,9 @@
       "status": "active",
       "createdAt": "2026-06-12T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-tts-benchmark",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
       }
     },
     {
@@ -80,9 +80,9 @@
       "status": "active",
       "createdAt": "2026-07-15T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-tts-benchmark",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
       }
     },
     {
@@ -94,9 +94,9 @@
       "status": "active",
       "createdAt": "2026-08-18T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-tts-benchmark",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
       }
     },
     {
@@ -108,9 +108,9 @@
       "status": "active",
       "createdAt": "2026-06-21T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-tts-benchmark",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-tts-benchmark"
       }
     },
     {
@@ -122,9 +122,9 @@
       "status": "active",
       "createdAt": "2026-06-12T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-4-deep-dive",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
       }
     },
     {
@@ -136,9 +136,9 @@
       "status": "active",
       "createdAt": "2026-07-15T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-4-deep-dive",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
       }
     },
     {
@@ -150,9 +150,9 @@
       "status": "active",
       "createdAt": "2026-08-18T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-4-deep-dive",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
       }
     },
     {
@@ -164,9 +164,9 @@
       "status": "active",
       "createdAt": "2026-06-21T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-4-deep-dive",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
       }
     },
     {
@@ -178,9 +178,9 @@
       "status": "active",
       "createdAt": "2026-07-24T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-4-deep-dive",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
       }
     },
     {
@@ -192,9 +192,9 @@
       "status": "active",
       "createdAt": "2026-08-27T10:00:00.000Z",
       "metadata": {
-        "utm_source": "yt-voice-4-deep-dive",
         "utm_medium": "video",
-        "utm_campaign": "feature-launch"
+        "utm_campaign": "feature-launch",
+        "video_id": "yt-voice-4-deep-dive"
       }
     }
   ]
