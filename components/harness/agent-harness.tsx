@@ -243,7 +243,7 @@ export function AgentHarness() {
         data: { message: error instanceof Error ? error.message : "Agent failed" },
       });
     } finally {
-      setBusy(false);
+      if (abortRef.current === controller) setBusy(false);
     }
   };
 
@@ -271,6 +271,9 @@ export function AgentHarness() {
       ...current,
       messages: [...current.messages, follow],
     }));
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setBusy(true);
 
     try {
@@ -286,15 +289,17 @@ export function AgentHarness() {
           accepted,
           answers,
         },
+        signal: controller.signal,
         onEvent: (event) => applyToAssistant(conversationId, follow.id, event),
       });
     } catch (error) {
+      if ((error as Error).name === "AbortError") return;
       applyToAssistant(conversationId, follow.id, {
         type: "error",
         data: { message: error instanceof Error ? error.message : "Confirm failed" },
       });
     } finally {
-      setBusy(false);
+      if (abortRef.current === controller) setBusy(false);
     }
   };
 

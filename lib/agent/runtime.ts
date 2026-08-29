@@ -1,4 +1,4 @@
-import { encodeSse } from "./sse";
+import { consumeSseStream, encodeSse } from "./sse";
 import type {
   AgentEvent,
   ApprovalRequest,
@@ -295,19 +295,7 @@ async function proxyAgent(req: ChatRequest, emit: (event: AgentEvent) => void) {
   }
 
   if (!res.body) throw new Error("Agent API returned no body");
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  const { parseSseChunk } = await import("./sse");
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer = parseSseChunk(buffer + decoder.decode(value, { stream: true }), emit);
-  }
-  if (buffer.trim()) parseSseChunk(buffer + "\n\n", emit);
+  await consumeSseStream(res.body, emit);
 }
 
 export async function runAgentTurn(
@@ -341,6 +329,8 @@ export async function confirmAgentTurn(
       body: JSON.stringify(req),
     });
     if (!res.ok) throw new Error(`Confirm failed (${res.status})`);
+    if (!res.body) throw new Error("Confirm API returned no body");
+    await consumeSseStream(res.body, emit);
     return;
   }
 

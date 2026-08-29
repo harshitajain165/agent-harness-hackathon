@@ -45,6 +45,14 @@ export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
 
   const seek = (next: number) => setTime(Math.min(duration, Math.max(0, next)));
 
+  const seekFromClientX = (clientX: number) => {
+    const lane = laneRef.current;
+    if (!lane) return;
+    const rect = lane.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    seek(((clientX - rect.left) / rect.width) * duration);
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="mx-3 mt-3 flex aspect-video items-center justify-center rounded-[10px] bg-neutral-950">
@@ -88,10 +96,26 @@ export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
           ref={laneRef}
           className="relative h-9"
           onPointerDown={(event) => {
+            if ((event.target as HTMLElement).closest("button")) return;
             const lane = laneRef.current;
             if (!lane) return;
-            const rect = lane.getBoundingClientRect();
-            seek(((event.clientX - rect.left) / rect.width) * duration);
+            lane.setPointerCapture(event.pointerId);
+            setPlaying(false);
+            seekFromClientX(event.clientX);
+          }}
+          onPointerMove={(event) => {
+            if (!laneRef.current?.hasPointerCapture(event.pointerId)) return;
+            seekFromClientX(event.clientX);
+          }}
+          onPointerUp={(event) => {
+            if (laneRef.current?.hasPointerCapture(event.pointerId)) {
+              laneRef.current.releasePointerCapture(event.pointerId);
+            }
+          }}
+          onPointerCancel={(event) => {
+            if (laneRef.current?.hasPointerCapture(event.pointerId)) {
+              laneRef.current.releasePointerCapture(event.pointerId);
+            }
           }}
         >
           {artifact.clips.map((clip) => {

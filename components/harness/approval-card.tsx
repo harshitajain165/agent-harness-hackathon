@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Frame, FramePanel } from "@/components/ui/frame";
@@ -22,6 +22,9 @@ export function ApprovalCard({
   const questions = approval.questions ?? [];
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [pendingAdvance, setPendingAdvance] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  const advancedRef = useRef(false);
   const question = questions[index] as ApprovalQuestion | undefined;
   const current = question ? answers[question.id] : undefined;
   const canContinue = useMemo(() => {
@@ -29,6 +32,14 @@ export function ApprovalCard({
     if (question.type === "single") return typeof current === "string" && current.length > 0;
     return Array.isArray(current) && current.length > 0;
   }, [current, question]);
+
+  useEffect(() => {
+    advancedRef.current = false;
+    setPendingAdvance(false);
+    return () => {
+      if (timerRef.current != null) window.clearTimeout(timerRef.current);
+    };
+  }, [index]);
 
   if (resolved) {
     return (
@@ -48,6 +59,13 @@ export function ApprovalCard({
   const finish = (accepted: boolean) => onSubmit(accepted, answers);
 
   const advance = () => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
+    if (timerRef.current != null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setPendingAdvance(false);
     if (index < questions.length - 1) {
       setIndex((value) => value + 1);
       return;
@@ -80,9 +98,10 @@ export function ApprovalCard({
             onValueChange={(value) => {
               if (!value) return;
               setAnswers((prev) => ({ ...prev, [question.id]: value }));
-              if (index < questions.length - 1) {
-                window.setTimeout(() => setIndex((n) => n + 1), 180);
-              }
+              if (index >= questions.length - 1) return;
+              if (timerRef.current != null) window.clearTimeout(timerRef.current);
+              setPendingAdvance(true);
+              timerRef.current = window.setTimeout(advance, 180);
             }}
           >
             {question.options.map((option) => (
@@ -125,7 +144,7 @@ export function ApprovalCard({
           <Button variant="tertiary" size="sm" onClick={() => finish(false)}>
             Dismiss
           </Button>
-          <Button variant="primary" size="sm" disabled={!canContinue} onClick={advance}>
+          <Button variant="primary" size="sm" disabled={!canContinue || pendingAdvance} onClick={advance}>
             {index < questions.length - 1 ? "Continue" : "Approve"}
             <Kbd>↵</Kbd>
           </Button>

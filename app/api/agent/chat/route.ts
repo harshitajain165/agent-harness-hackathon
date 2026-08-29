@@ -1,9 +1,13 @@
+import { authorizeHarness } from "@/lib/agent/auth";
 import { runAgentTurn, toSseStream } from "@/lib/agent/runtime";
 import type { ChatRequest } from "@/lib/agent/types";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const denied = authorizeHarness(request);
+  if (denied) return denied;
+
   const body = (await request.json()) as ChatRequest;
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return Response.json({ error: "messages are required" }, { status: 400 });

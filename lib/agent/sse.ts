@@ -4,11 +4,15 @@ export function encodeSse(event: AgentEvent): string {
   return `event: ${event.type}\ndata: ${JSON.stringify(event.data ?? {})}\n\n`;
 }
 
+function normalizeNewlines(value: string) {
+  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
 export function parseSseChunk(
   chunk: string,
   onEvent: (event: AgentEvent) => void
 ): string {
-  const parts = chunk.split("\n\n");
+  const parts = normalizeNewlines(chunk).split("\n\n");
   const remainder = parts.pop() ?? "";
 
   for (const part of parts) {
@@ -28,4 +32,22 @@ export function parseSseChunk(
   }
 
   return remainder;
+}
+
+export async function consumeSseStream(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (event: AgentEvent) => void
+) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer = parseSseChunk(buffer + decoder.decode(value, { stream: true }), onEvent);
+  }
+
+  buffer += decoder.decode();
+  if (buffer.trim()) parseSseChunk(buffer + "\n\n", onEvent);
 }
