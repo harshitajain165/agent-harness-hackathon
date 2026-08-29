@@ -76,9 +76,15 @@ export function SidebarNav({
 
   return (
     <aside className="hidden h-full w-[240px] shrink-0 flex-col py-2 pl-2 lg:flex">
-      <div className="flex items-center px-2 py-1.5">
-        <Text size="sm" weight="medium" className="min-w-0 truncate">
+      <div className="flex items-center px-2 py-2">
+        <Text size="2xl" weight="medium" className="min-w-0 leading-none">
           Nolan
+          <span
+            aria-hidden
+            className="ml-px inline-block align-super text-lg leading-none"
+          >
+            ™
+          </span>
         </Text>
       </div>
 

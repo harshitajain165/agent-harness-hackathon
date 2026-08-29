@@ -46,7 +46,7 @@ export function PromptBar({
       onSubmit={submit}
       className={cn(
         "flex flex-col rounded-[14px] bg-neutral-0 p-2 shadow-sm",
-        "ring-1 ring-inset ring-neutral-200 focus-within:ring-1 focus-within:ring-brand-border-focus"
+        "ring-[0.5px] ring-inset ring-neutral-200 focus-within:ring-1 focus-within:ring-brand-border-focus"
       )}
     >
       <Textarea
