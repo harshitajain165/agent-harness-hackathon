@@ -71,6 +71,9 @@ export type VideoArtifact = {
   title: string;
   durationMs: number;
   clips: VideoClip[];
+  /** Playable URL (e.g. /artifacts/<id>.webm). Optional — older/mock artifacts have no
+   *  real file and VideoEditor falls back to its label-only placeholder. */
+  src?: string;
 };
 
 export type Artifact = RecordsArtifact | DiffArtifact | VideoArtifact;

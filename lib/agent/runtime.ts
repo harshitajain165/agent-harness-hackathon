@@ -1,4 +1,5 @@
 import { consumeSseStream, encodeSse } from "./sse";
+import { confirmTrueForgeTurn, runTrueForgeTurn } from "./trueforge/run";
 import type {
   AgentEvent,
   ApprovalRequest,
@@ -302,6 +303,10 @@ export async function runAgentTurn(
   req: ChatRequest,
   emit: (event: AgentEvent) => void
 ) {
+  if (process.env.TRUEFORGE_BASE_URL) {
+    await runTrueForgeTurn(req, emit);
+    return;
+  }
   if (process.env.AGENT_API_URL) {
     await proxyAgent(req, emit);
     return;
@@ -313,6 +318,10 @@ export async function confirmAgentTurn(
   req: ConfirmRequest,
   emit: (event: AgentEvent) => void
 ) {
+  if (process.env.TRUEFORGE_BASE_URL) {
+    await confirmTrueForgeTurn(req, emit);
+    return;
+  }
   if (process.env.AGENT_API_URL) {
     const endpoint = new URL(process.env.AGENT_API_URL);
     endpoint.pathname = endpoint.pathname.replace(/\/?$/, "/confirm");
