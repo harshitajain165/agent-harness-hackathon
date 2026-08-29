@@ -8,7 +8,9 @@ Requires **Node ≥ 22** (`@truefoundry/trueforge-sdk` declares this in its own 
 the TrueForge mode below won't run correctly on older Node, even though the plain UI/mock mode
 would). `pnpm install` also runs `playwright install chromium` via `postinstall`, needed for
 `record_demo`'s real recording — safe to skip if you only use the mock/proxy backends, but it
-runs by default.
+runs by default. `record_demo` also shells out to a system **ffmpeg** (with `ffprobe`) to
+composite narration/zoom — `brew install ffmpeg` (macOS) or your platform's equivalent; not
+installed by `pnpm install`.
 
 ```bash
 pnpm install
@@ -50,13 +52,35 @@ in-memory outbox, pauses for approval via TrueForge's default `require_approval_
 the UI's `confirmation_required` / `/api/agent/confirm` round-trip already handles. Agent spec:
 `harness/agent-spec.ts`.
 
-`record_demo` (`lib/tools/record-demo.ts`) is a **real** recording: headless Playwright drives a
-fixed interaction (open Settings → switch agent preset → close) against a real local app and
-writes an actual `.webm` to `public/artifacts/`, which streams into the UI's video pane for real.
-Set `DEMO_APP_URL` and have that app running (defaults to `http://localhost:3100`) — no OS
-screen-recording permission or ffmpeg system dependency needed (Playwright's own `recordVideo`,
-no cursor). The interaction script is currently hardcoded, not agent-authored — a documented
-simplification, see the comment in `lib/tools/record-demo.ts`.
+`record_demo` (`lib/tools/record-demo.ts`) is a **real** recording, and it isn't limited to one
+pre-wired app: it takes any `http(s)` URL plus an **agent-authored** list of steps
+(click/type/press/wait/scroll), executes them with headless Playwright `recordVideo`, and writes
+a final `.mp4` to `public/artifacts/`, which streams into the UI's video pane for real. No OS
+screen-recording permission — no visible cursor either (that's the real-capture path from
+`PROJECT_PLAN.md` §4, a later upgrade).
+
+Any step can carry two extras, composited in by `lib/tools/compose-video.ts` (ffmpeg) after the
+raw Playwright recording finishes:
+
+- **`narration`** — a line of text, synthesized via OpenAI TTS (`lib/tools/tts.ts`,
+  `gpt-4o-mini-tts` falling back to `tts-1`, disk-cached by a hash of the text) *before*
+  recording starts. Its exact duration is known up front, so that step's real-time settle
+  is stretched to at least that long — the mixed-in narration can never overlap into the
+  next step's visual action. Requires `OPENAI_API_KEY` (separate from whatever model key is
+  configured inside TrueForge's own Settings — this app's process can't see that one).
+- **`zoom: true`** (click/scroll steps) — captures the target element's real bounding box just
+  before the action runs, and the video crops/scales into that region for the step's duration.
+  A hard cut in zoom level, not a smooth Ken-Burns ease — a documented simplification.
+
+Both are optional and independent — narration-only, zoom-only, both, or neither (in which case
+the video is still re-encoded to mp4, just without any filters applied) all work.
+
+Since the agent has no vision, it can't guess real selectors on a page it's never seen — that's
+what `inspect_page(url)` is for: it loads the page and returns its actual interactive elements
+with a usable selector for each (`harness/agent-spec.ts`'s instructions tell the agent to always
+call this first). `DEMO_APP_URL` (defaults to `http://localhost:3100`) is just the **suggested
+default target** when nobody names a URL — the agent can record any reachable app or site it's
+told to.
 
 `app/api/mcp/route.ts` is unauthenticated by default (frictionless for local dev), but it launches
 a real browser and writes real files on every `record_demo` call. Set `MCP_SECRET` to require a
