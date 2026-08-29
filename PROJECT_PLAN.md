@@ -10,9 +10,6 @@ camera, records the voiceover, cuts the thing together, and comes back with note
 
 One day. Three people. Everything runs on a laptop.
 
-> **Plain-English version:** [`docs/plan-in-plain-english.md`](docs/plan-in-plain-english.md) — same plan,
-> no jargon. If you only read one, read that one first and come back here for the specifics.
-
 ---
 
 ## 0. Read this first — assumptions, and three findings that changed the design
