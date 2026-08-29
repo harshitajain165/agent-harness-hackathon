@@ -514,6 +514,7 @@ export function ChannelPreviews({
               durationMs={durationMs}
               selectedId={selectedId}
               onSelect={(clip) => setSelectedId(clip.id)}
+              showRuler={false}
             />
             {selected ? (
               <div className="flex items-baseline justify-between gap-2">
