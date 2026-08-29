@@ -1,9 +1,11 @@
 import { test } from 'node:test';
+import { attributeRevenue, revenueHeadline } from '../lib/scrapers/attribution.ts';
+import { attributionToRecords, repairToDiff } from '../lib/scrapers/artifacts.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { loadRecipe } from '../src/recipes/load.ts';
-import { extractWithRecipe, parseNumber } from '../src/recipes/extract.ts';
-import { normalizeLinkedInPost, normalizeXPost } from '../src/recipes/normalize.ts';
+import { loadRecipe } from '../lib/scrapers/load.ts';
+import { extractWithRecipe, parseNumber } from '../lib/scrapers/extract.ts';
+import { normalizeLinkedInPost, normalizeXPost } from '../lib/scrapers/normalize.ts';
 
 const recipe = loadRecipe('competitor-blog');
 const v1 = readFileSync('fixtures/competitor-blog.v1.html', 'utf8');
@@ -138,4 +140,70 @@ test('hashtags are recovered from X body text, which has no hashtags field', () 
   const p = normalizeXPost({ description: 'shipping #voiceai agents #realtime today', likes: 1 });
   assert.deepEqual(p.hashtags, ['#voiceai', '#realtime']);
   assert.equal(p.metrics.hashtagCount, 2);
+});
+
+/* ---------- revenue attribution ---------- */
+
+test('revenue is attributed to the campaign carrying the utm_source', () => {
+  const rows = attributeRevenue();
+  assert.equal(rows.length, 3);
+
+  for (const r of rows) {
+    assert.equal(r.arr, r.mrr * 12);
+    assert.ok(r.conversions > 0, `${r.utmSource} should have conversions`);
+    assert.equal(r.revenuePerThousandViews, Number(((r.mrr / r.views) * 1000).toFixed(2)));
+  }
+
+  // Sorted by revenue per view, not by reach.
+  const perView = rows.map((r) => r.revenuePerThousandViews);
+  assert.deepEqual(perView, [...perView].sort((a, b) => b - a));
+});
+
+test('churned subscriptions are not counted as revenue', () => {
+  const source = {
+    loadCampaigns: () => [{
+      utmSource: 'c1', title: 'T', url: 'u', platform: 'x',
+      publishedAt: '2026-01-01', durationSeconds: 30, views: 1000,
+    }],
+    loadSubscriptions: () => [
+      { id: 's1', customerId: 'c', plan: 'growth', mrr: 199, currency: 'usd', status: 'active',
+        createdAt: '2026-01-02', metadata: { utm_source: 'c1' } },
+      { id: 's2', customerId: 'd', plan: 'scale', mrr: 999, currency: 'usd', status: 'canceled',
+        createdAt: '2026-01-03', metadata: { utm_source: 'c1' } },
+    ],
+  };
+  const [row] = attributeRevenue(source);
+  assert.equal(row.conversions, 1, 'the cancelled subscription must be excluded');
+  assert.equal(row.mrr, 199);
+});
+
+test('the headline reports when reach and revenue disagree', () => {
+  const headline = revenueHeadline(attributeRevenue());
+  assert.match(headline, /most views/);
+  assert.match(headline, /more per view/);
+});
+
+/* ---------- UI artifact adapters ---------- */
+
+test('attribution renders as a records artifact the UI already supports', () => {
+  const a = attributionToRecords(attributeRevenue());
+  assert.equal(a.kind, 'records');
+  assert.equal(a.rows.length, 3);
+  for (const row of a.rows) {
+    assert.deepEqual(Object.keys(row), a.columns, 'every row must fill every column');
+    assert.match(row.MRR, /^\$/);
+  }
+});
+
+test('a repair renders as a reviewable YAML diff', () => {
+  const d = repairToDiff('competitor-blog', 1, 2, [
+    { field: 'title', from: 'h1.post-title', to: '[data-testid="entry-title"]' },
+  ]);
+  assert.equal(d.kind, 'diff');
+  assert.equal(d.files[0].path, 'scrapers/competitor-blog.recipe.yaml');
+  // One version bump plus one selector change on each side.
+  assert.equal(d.files[0].added, 2);
+  assert.equal(d.files[0].removed, 2);
+  assert.ok(d.files[0].lines.some((l) => l.tone === 'del' && l.text.includes('h1.post-title')));
+  assert.ok(d.files[0].lines.some((l) => l.tone === 'add' && l.text.includes('entry-title')));
 });

@@ -1,0 +1,38 @@
+{
+  "kind": "records",
+  "title": "Revenue by video",
+  "columns": [
+    "Video",
+    "Length",
+    "Views",
+    "Customers",
+    "MRR",
+    "MRR / 1k views"
+  ],
+  "rows": [
+    {
+      "Video": "Voice Agents can now join meetings",
+      "Length": "0:45",
+      "Views": "1,164",
+      "Customers": "4",
+      "MRR": "$1,446",
+      "MRR / 1k views": "$1,242"
+    },
+    {
+      "Video": "Fastest TTS: the benchmark, explained",
+      "Length": "1:35",
+      "Views": "3,210",
+      "Customers": "4",
+      "MRR": "$496",
+      "MRR / 1k views": "$155"
+    },
+    {
+      "Video": "Voice 4.0 architecture: a deep dive",
+      "Length": "3:12",
+      "Views": "8,400",
+      "Customers": "6",
+      "MRR": "$594",
+      "MRR / 1k views": "$71"
+    }
+  ]
+}

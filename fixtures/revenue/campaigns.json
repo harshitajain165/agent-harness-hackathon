@@ -1,0 +1,32 @@
+{
+  "_note": "Video campaigns. utmSource is what a subscription carries back, and what joins revenue to a video.",
+  "campaigns": [
+    {
+      "utmSource": "yt-voice-agents-meetings",
+      "title": "Voice Agents can now join meetings",
+      "url": "https://x.com/smallest_AI/status/2070488587867505003",
+      "platform": "x",
+      "publishedAt": "2026-06-26T12:45:21.000Z",
+      "durationSeconds": 45,
+      "views": 1164
+    },
+    {
+      "utmSource": "yt-voice-4-deep-dive",
+      "title": "Voice 4.0 architecture: a deep dive",
+      "url": "https://www.youtube.com/watch?v=EXAMPLE-deep-dive",
+      "platform": "youtube",
+      "publishedAt": "2026-05-14T09:00:00.000Z",
+      "durationSeconds": 192,
+      "views": 8400
+    },
+    {
+      "utmSource": "yt-tts-benchmark",
+      "title": "Fastest TTS: the benchmark, explained",
+      "url": "https://www.youtube.com/watch?v=EXAMPLE-benchmark",
+      "platform": "youtube",
+      "publishedAt": "2026-07-02T16:20:00.000Z",
+      "durationSeconds": 95,
+      "views": 3210
+    }
+  ]
+}
