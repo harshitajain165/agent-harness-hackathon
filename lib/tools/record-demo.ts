@@ -38,7 +38,9 @@ function describeStep(step: RecordStep): string {
   }
 }
 
-async function runStep(page: Page, step: RecordStep) {
+/** Exported for reuse by create-image-post.ts — same click/type/press/wait/scroll vocabulary,
+ *  just narrating/recording is meaningless for a still screenshot so those fields are ignored. */
+export async function runStep(page: Page, step: RecordStep) {
   switch (step.action) {
     case "click":
       await page.locator(step.selector).first().click({ timeout: 5_000 });
