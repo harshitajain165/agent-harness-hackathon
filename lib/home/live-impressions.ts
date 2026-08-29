@@ -6,6 +6,10 @@ import {
   buildImpressionHistory,
   COMBINED_SERIES_COLOR,
   COMBINED_SERIES_ID,
+  COMPETITOR_MEAN_SERIES_COLOR,
+  COMPETITOR_MEAN_SERIES_ID,
+  COMPETITOR_MEAN_SERIES_LABEL,
+  OURS_SERIES_LABEL,
   sumImpressions,
   type ImpressionHistory,
 } from "@/lib/home/impressions";
@@ -70,9 +74,24 @@ const EMPTY_HISTORY: ImpressionHistory = {
     data: [],
     value: EMPTY_TOTAL,
     color: COMBINED_SERIES_COLOR,
-    label: "All posts",
+    label: OURS_SERIES_LABEL,
   },
-  series: [],
+  series: [
+    {
+      id: COMBINED_SERIES_ID,
+      data: [],
+      value: EMPTY_TOTAL,
+      color: COMBINED_SERIES_COLOR,
+      label: OURS_SERIES_LABEL,
+    },
+    {
+      id: COMPETITOR_MEAN_SERIES_ID,
+      data: [],
+      value: 0,
+      color: COMPETITOR_MEAN_SERIES_COLOR,
+      label: COMPETITOR_MEAN_SERIES_LABEL,
+    },
+  ],
   totalImpressions: EMPTY_TOTAL,
 };
 
@@ -106,6 +125,14 @@ function signedDelta(id: string, current: number) {
   return Math.round(magnitude);
 }
 
+function competitorDrift(current: number) {
+  const rand = randFor(COMPETITOR_MEAN_SERIES_ID);
+  if (rand() < 0.4) return 0;
+  const scale = Math.max(3, current * 0.0002);
+  const magnitude = scale * (0.4 + rand() * 0.9);
+  return rand() < 0.38 ? -Math.round(magnitude) : Math.round(magnitude);
+}
+
 function applyDelta(item: HomeRankedItem, extra = 0): HomeRankedItem {
   const next = Math.max(0, Math.round(item.impressions + signedDelta(item.id, item.impressions) + extra));
   if (next === item.impressions) return item;
@@ -130,6 +157,9 @@ function applyTotalsToHistory(
   const total = sumImpressions(videos);
   const series = history.series.map((item) => {
     if (item.id === COMBINED_SERIES_ID) return patchLastPoint(item, total, nowSec);
+    if (item.id === COMPETITOR_MEAN_SERIES_ID) {
+      return patchLastPoint(item, Math.max(0, item.value + competitorDrift(item.value)), nowSec);
+    }
     const value = byId.get(item.id);
     return value == null ? item : patchLastPoint(item, value, nowSec);
   });

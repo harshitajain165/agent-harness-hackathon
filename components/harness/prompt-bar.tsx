@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 export function PromptBar({
-  placeholder = "Ask anything",
+  placeholder = "Define any feature or user flow",
   disabled,
   onSend,
   autoFocus,

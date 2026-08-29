@@ -38,10 +38,15 @@ import {
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useLiveImpressions } from "@/lib/home/live-impressions";
+import { usePublishedChannels } from "@/lib/home/published-channels";
 import {
+  addedImpressionChannels,
+  applyChannelPresence,
   buildPublishRows,
   formatCompactCount,
   formatRevenue,
+  PUBLISH_IMPRESSION_COLUMNS,
+  publishedUrlsForRow,
   sortPublishRows,
   type PublishRow,
   type PublishSort,
@@ -77,8 +82,24 @@ function MetricValue({ children }: { children: string }) {
   );
 }
 
+function ChannelHead({ icon, label }: { icon: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <img
+        src={icon}
+        alt=""
+        width={16}
+        height={16}
+        className="size-4 shrink-0 rounded-[3px] object-cover"
+      />
+      {label}
+    </span>
+  );
+}
+
 export function PublishesTable({ videos: videosProp }: { videos?: HomeRankedItem[] }) {
   const live = useLiveImpressions();
+  const publishedByVideo = usePublishedChannels();
   const liveMode = videosProp == null;
   const seed = videosProp ?? SAMPLE_VIDEOS;
   const [query, setQuery] = useState("");
@@ -94,12 +115,12 @@ export function PublishesTable({ videos: videosProp }: { videos?: HomeRankedItem
   );
   const rows = useMemo(
     () =>
-      incoming.map((row) => ({
-        ...row,
-        ...overrides[row.id],
-        impressions: liveMode ? (liveById[row.id] ?? row.impressions) : row.impressions,
-      })),
-    [incoming, liveById, liveMode, overrides],
+      incoming.map((row) => {
+        const total = liveMode ? (liveById[row.id] ?? row.impressionTotal) : row.impressionTotal;
+        const extra = addedImpressionChannels(publishedUrlsForRow(row, publishedByVideo));
+        return applyChannelPresence({ ...row, ...overrides[row.id] }, total, extra);
+      }),
+    [incoming, liveById, liveMode, overrides, publishedByVideo],
   );
 
   const visible = useMemo(() => {
@@ -195,7 +216,11 @@ export function PublishesTable({ videos: videosProp }: { videos?: HomeRankedItem
               Name
             </TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="w-28">Impressions</TableHead>
+            {PUBLISH_IMPRESSION_COLUMNS.map((column) => (
+              <TableHead key={column.id} className="w-28">
+                <ChannelHead icon={column.icon} label={column.label} />
+              </TableHead>
+            ))}
             <TableHead className="w-24">Likes</TableHead>
             <TableHead className="w-28">Comments</TableHead>
             <TableHead className="w-28">Trickle-down</TableHead>
@@ -243,9 +268,14 @@ export function PublishesTable({ videos: videosProp }: { videos?: HomeRankedItem
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
-              <TableCell className="w-28">
-                <MetricValue>{formatCompactCount(row.impressions)}</MetricValue>
-              </TableCell>
+              {PUBLISH_IMPRESSION_COLUMNS.map((column) => {
+                const value = row.channels[column.id];
+                return (
+                  <TableCell key={column.id} className="w-28">
+                    {value == null ? null : <MetricValue>{formatCompactCount(value)}</MetricValue>}
+                  </TableCell>
+                );
+              })}
               <TableCell className="w-24">
                 <MetricValue>{formatCompactCount(row.likes)}</MetricValue>
               </TableCell>

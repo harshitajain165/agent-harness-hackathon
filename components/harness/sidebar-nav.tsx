@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { GlobeIcon, HomeIcon, PlayIcon, PlusIcon } from "@/components/icons";
+import { HomeIcon, PlayIcon, PlusIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,12 +13,11 @@ export type SidebarChat = {
   title: string | null;
 };
 
-export type SidebarTab = "home" | "publishes" | "channels";
+export type SidebarTab = "home" | "publishes";
 
 const TABS: { id: SidebarTab; label: string; icon: typeof HomeIcon }[] = [
   { id: "home", label: "Home", icon: HomeIcon },
   { id: "publishes", label: "Publishes", icon: PlayIcon },
-  { id: "channels", label: "Channels", icon: GlobeIcon },
 ];
 
 function isTypingTarget(target: EventTarget | null) {

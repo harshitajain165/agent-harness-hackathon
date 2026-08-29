@@ -23,11 +23,22 @@ import { PromptBar } from "./prompt-bar";
 import { RecordsTable } from "./records-table";
 import { SidebarNav, type SidebarTab } from "./sidebar-nav";
 import { toast } from "@/components/ui/toast";
+import {
+  PublishChannelsDialog,
+  publishVideoKey,
+  type PublishedChannelUrl,
+} from "./publish-channels-dialog";
+import {
+  publishRowAliases,
+  setPublishedUrlsForVideo,
+  usePublishedChannels,
+} from "@/lib/home/published-channels";
 import { FollowUpList, StreamingText, UserBubble, VIDEO_FOLLOW_UPS, type FollowUp } from "./streaming-text";
 import { liveSearchFromTurn, ThinkingState } from "./thinking-state";
 import { ToolChips } from "./tool-chips";
 import { VideoCreating } from "./creation-orb";
 import { CatalogPage } from "./catalog-page";
+import { HeroHeading } from "./hero-heading";
 import { HomeDashboard } from "./home-dashboard";
 import { SuggestionRail } from "./suggestion-rail";
 import { ChannelPreviews } from "./channel-previews";
@@ -255,7 +266,7 @@ export function AgentHarness() {
     { id: "home", title: null, messages: [] },
   ]);
   const [activeId, setActiveId] = useState("home");
-  const [view, setView] = useState<"dashboard" | "publishes" | "channels" | "chat">("dashboard");
+  const [view, setView] = useState<"dashboard" | "publishes" | "chat">("dashboard");
   const [busy, setBusy] = useState(false);
   const [closedPane, setClosedPane] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -264,6 +275,9 @@ export function AgentHarness() {
   const [composer, setComposer] = useState("");
   const [focusComposer, setFocusComposer] = useState(false);
   const [composerH, setComposerH] = useState(88);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishVideo, setPublishVideo] = useState<Extract<Artifact, { kind: "video" }> | null>(null);
+  const publishedByVideo = usePublishedChannels();
 
   const chat = chats.find((item) => item.id === activeId) ?? chats[0];
   const active = chat.messages.length > 0;
@@ -417,7 +431,26 @@ export function AgentHarness() {
       toast("Export started");
       return;
     }
+    if (item.id === "publish") {
+      setPublishVideo(video ?? lastVideo ?? null);
+      setPublishOpen(true);
+      return;
+    }
     if (item.prompt) void send(item.prompt);
+  };
+
+  const savePublishedUrls = (urls: PublishedChannelUrl[]) => {
+    const video = publishVideo ?? lastVideo;
+    const key = publishVideoKey(video);
+    setPublishedUrlsForVideo(key, urls, publishRowAliases(video));
+    toast("Post URLs saved");
+
+    const filled = urls.filter((row) => row.url.trim());
+    if (filled.length === 0) return;
+    const lines = filled
+      .map((row) => `- ${row.channel}: ${row.url.trim()}`)
+      .join("\n");
+    void send(`Track these live post URLs:\n${lines}`);
   };
 
   const prefillPrompt = (text: string) => {
@@ -490,8 +523,7 @@ export function AgentHarness() {
       <div className="flex min-w-0 flex-1 gap-2.5 p-2.5">
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[14px] bg-neutral-0 shadow-sm">
           {view === "dashboard" ? <HomeDashboard /> : null}
-          {view === "publishes" ? <CatalogPage title="Publishes" kind="publishes" /> : null}
-          {view === "channels" ? <CatalogPage title="Channels" kind="channels" /> : null}
+          {view === "publishes" ? <CatalogPage title="Publishes" /> : null}
           {view === "chat" ? (
           <>
           <div className="flex h-11 shrink-0 items-center gap-1 overflow-x-auto px-2">
@@ -573,14 +605,11 @@ export function AgentHarness() {
             </div>
           ) : (
             <div className="mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col justify-center px-4 py-10 sm:px-8">
-              <h1 className="font-heading text-2xl font-medium leading-none tracking-[-0.02em] text-fg">
-                <span className="block text-fg-tertiary">Hello</span>
-                <span className="block">Let's make a film</span>
-              </h1>
+              <HeroHeading />
               <div className="mt-7">
                 <PromptBar
                   autoFocus
-                  placeholder="Ask anything"
+                  placeholder="Define any feature or user flow"
                   disabled={busy}
                   value={composer}
                   onChange={setComposer}
@@ -641,6 +670,13 @@ export function AgentHarness() {
           </aside>
         ) : null}
       </div>
+      <PublishChannelsDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        video={publishVideo}
+        savedUrls={publishedByVideo[publishVideoKey(publishVideo)]}
+        onSave={savePublishedUrls}
+      />
     </main>
   );
 }

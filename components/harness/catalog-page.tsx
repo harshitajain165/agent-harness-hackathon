@@ -1,23 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useLiveImpressions } from "@/lib/home/live-impressions";
-import type { HomeMetricKind } from "@/lib/home/types";
-import { RankedColumn } from "./home-ranked-lists";
 import { PublishesTable } from "./publishes-table";
 
-export function CatalogPage({
-  title,
-  kind,
-}: {
-  title: string;
-  kind: "publishes" | "channels";
-}) {
-  const live = useLiveImpressions();
-  const [metric, setMetric] = useState<HomeMetricKind>("impressions");
-
+export function CatalogPage({ title }: { title: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex h-11 shrink-0 items-center px-2">
@@ -30,24 +17,9 @@ export function CatalogPage({
         </Breadcrumb>
       </header>
       <ScrollArea className="min-h-0 flex-1" scrollFade>
-        {kind === "publishes" ? (
-          <div className="px-4 py-6">
-            <PublishesTable />
-          </div>
-        ) : (
-          <div className="mx-auto w-full max-w-[820px] px-6 py-8">
-            <div className="rounded-[14px] bg-neutral-0">
-              <RankedColumn
-                title="Channels"
-                items={live.channels}
-                metric={metric}
-                onMetricChange={setMetric}
-                fallbackIcon="none"
-                empty="Channels a video is live on will show here."
-              />
-            </div>
-          </div>
-        )}
+        <div className="px-4 py-6">
+          <PublishesTable />
+        </div>
       </ScrollArea>
     </div>
   );
