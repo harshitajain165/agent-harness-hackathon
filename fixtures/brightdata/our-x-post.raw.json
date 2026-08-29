@@ -21,5 +21,6 @@
     }
   ],
   "verification_type": "gold",
-  "_note": "trimmed to the fields Nolan consumes"
+  "_note": "trimmed to the fields Nolan consumes",
+  "timestamp": "2026-08-29T20:55:26.601Z"
 }

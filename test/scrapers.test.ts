@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadRecipe } from '../lib/scrapers/load.ts';
 import { extractWithRecipe, parseNumber } from '../lib/scrapers/extract.ts';
-import { normalizeLinkedInPost, normalizeXPost } from '../lib/scrapers/normalize.ts';
+import { freshness, normalizeLinkedInPost, normalizeXPost } from '../lib/scrapers/normalize.ts';
 
 const recipe = loadRecipe('competitor-blog');
 const v1 = readFileSync('fixtures/competitor-blog.v1.html', 'utf8');
@@ -112,7 +112,7 @@ test('a real LinkedIn payload normalises to the UI contract', () => {
   // And that the output is exactly the contract's shape — no stray passthrough.
   assert.deepEqual(
     Object.keys(p).sort(),
-    ['author', 'engagement', 'hashtags', 'hook', 'id', 'media', 'metrics', 'platform', 'postedAt', 'text', 'url'],
+    ['author', 'engagement', 'hashtags', 'hook', 'id', 'media', 'metrics', 'platform', 'postedAt', 'scrapedAt', 'text', 'url'],
   );
 });
 
@@ -206,4 +206,15 @@ test('a repair renders as a reviewable YAML diff', () => {
   assert.equal(d.files[0].removed, 2);
   assert.ok(d.files[0].lines.some((l) => l.tone === 'del' && l.text.includes('h1.post-title')));
   assert.ok(d.files[0].lines.some((l) => l.tone === 'add' && l.text.includes('entry-title')));
+});
+
+test('a scraped post records when it was read, not just when it was posted', () => {
+  const p = normalizeXPost(JSON.parse(readFileSync('fixtures/brightdata/our-x-post.raw.json', 'utf8')));
+  assert.ok(p.scrapedAt, 'scrapedAt must survive normalisation — it is how the UI shows freshness');
+  assert.ok(new Date(p.scrapedAt!) > new Date(p.postedAt), 'scraped after it was posted');
+
+  // Bright Data is pull-only, so every figure is a point-in-time reading.
+  const now = new Date('2026-08-29T21:55:26.601Z');
+  assert.equal(freshness(p, now), '1h ago');
+  assert.equal(freshness({ scrapedAt: undefined }), 'unknown');
 });

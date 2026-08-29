@@ -43,6 +43,7 @@ export function normalizeLinkedInPost(raw: Record<string, unknown>): Post {
       followers,
     },
     postedAt: str(raw.date_posted),
+    scrapedAt: str(raw.timestamp) || undefined,
     text,
     hook: (text.split('\n')[0] ?? '').trim(),
     hashtags,
@@ -81,6 +82,7 @@ export function normalizeXPost(raw: Record<string, unknown>): Post {
       followers,
     },
     postedAt: str(raw.date_posted),
+    scrapedAt: str(raw.timestamp) || undefined,
     text,
     hook: (text.split('\n')[0] ?? '').trim(),
     hashtags,
@@ -90,4 +92,15 @@ export function normalizeXPost(raw: Record<string, unknown>): Post {
   };
   if (views && views > 0) post.metrics.viewRate = Number(((engagement.total / views) * 100).toFixed(2));
   return post;
+}
+
+/** How old a reading is, for the UI to display. Bright Data gives point-in-time data, not a feed. */
+export function freshness(post: { scrapedAt?: string }, now = new Date()): string {
+  if (!post.scrapedAt) return 'unknown';
+  const mins = Math.floor((now.getTime() - new Date(post.scrapedAt).getTime()) / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }

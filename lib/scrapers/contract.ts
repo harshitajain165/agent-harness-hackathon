@@ -50,6 +50,12 @@ export interface Post {
   url: string;
   author: Author;
   postedAt: string;
+  /**
+   * When this was scraped, not when it was posted. Bright Data is pull-only —
+   * there is no feed — so every figure is a point-in-time reading and the UI
+   * should say how old it is rather than implying live data.
+   */
+  scrapedAt?: string;
   text: string;
   /** First line — what a reader actually decides on. */
   hook: string;
