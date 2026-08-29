@@ -1,11 +1,17 @@
-# LaunchLoop — Project Plan
+# Nolan — Project Plan
 
 **An AI product-marketing agent built on [TrueForge](https://github.com/truefoundry/trueforge).**
 You tell it what you shipped. It opens your product, records itself using the feature, narrates it,
 drafts your launch posts, waits for your approval — then goes and finds out how the post did and how
 the competition does it better.
 
+Named for what it actually does: it directs the whole shoot end to end — writes the shot list, runs the
+camera, records the voiceover, cuts the thing together, and comes back with notes for the next one.
+
 One day. Three people. Everything runs on a laptop.
+
+> **Plain-English version:** [`docs/plan-in-plain-english.md`](docs/plan-in-plain-english.md) — same plan,
+> no jargon. If you only read one, read that one first and come back here for the specifics.
 
 ---
 
@@ -72,7 +78,7 @@ built properly, with every risky link pre-wired to a fallback.
 | Toy SaaS demo app with a real dark-mode feature | Auth, accounts, multi-user | Publishing → local outbox + fake feed card |
 | Local MCP tool server: record, narrate, stitch, publish, recipes | Cloud deploy of anything | "Your post's engagement" → one real scrape of a seeded post |
 | Agent spec with two approval gates | Video editing UI / timeline scrubbing | Competitor set → 3 curated real public post URLs, not open-ended discovery |
-| Custom Studio UI on the SDK | Multi-language TTS, voice cloning | The scraper "break" → a deliberately pinned stale selector |
+| Custom Nolan Studio UI on the SDK | Multi-language TTS, voice cloning | The scraper "break" → a deliberately pinned stale selector |
 | Bright Data recipe layer + auto-repair | Arbitrary target apps (works on *our* app) | — |
 | Insights report + improved-prompt output | Analytics, history, saved campaigns | — |
 
@@ -99,13 +105,13 @@ Four processes on one laptop:
 
 - **TrueForge** (`:8790`) — the agent loop, approvals, sessions, subagents, compaction. We run it via `npx`, pointed at our repo's catalog file. We do not fork it.
 - **Our Node process** (`:8081`) — Fastify with three routers: `/mcp` (our tools, as a real MCP server), `/api` (backend-for-frontend for the UI), `/media` (serves artifacts).
-- **Studio UI** (`:5173`) — Vite + React, our own design, driven by the BFF's SSE stream.
+- **Nolan Studio** (`:5173`) — the UI. Vite + React, our own design, driven by the BFF's SSE stream.
 - **Demo app** (`:5174`) — the toy SaaS the agent records.
 
 ```mermaid
 flowchart TB
   subgraph Browser["Browser — localhost:5173"]
-    UI["Studio UI · Vite + React<br/>storyboard · video · post preview · insights"]
+    UI["Nolan Studio · Vite + React<br/>storyboard · video · post preview · insights"]
   end
 
   subgraph Node["One Node process — localhost:8081"]
@@ -436,7 +442,7 @@ Three lanes, chosen so the two devs never edit the same file. Merge conflicts at
 |---|---|---|---|
 | **0–1** | Repo scaffold, brand, demo-app wireframe. Install Qodo app | **Spike:** TrueForge running, OpenAI configured, one real agent chat working | **Spike:** Bright Data connector with `?groups=social`, one live `search_engine` call returning URLs |
 | **1–2** | `apps/demo-app` UI — it must look like a real product on camera | MCP server skeleton + 5 stub tools returning canned data; `harness/mcp-catalog.yaml` | Fastify BFF: SSE endpoint, event index, delta merge, per-thread buckets |
-| **2–3** | Studio UI comps: storyboard lanes, approval modal, empty states | `harness/create-agent.ts` — agent spec via SDK, tool annotations set | Wire UI → BFF → TrueForge. Approval resume path |
+| **2–3** | Nolan Studio comps: storyboard lanes, approval modal, empty states | `harness/create-agent.ts` — agent spec via SDK, tool annotations set | Wire UI → BFF → TrueForge. Approval resume path |
 | **T+3** | 🚩 **Checkpoint A — end-to-end on stubs.** Prompt goes in, fake steps stream to the UI, fake approval pauses and resumes, fake video plays. Nothing real yet, everything connected. | | |
 | **3–5** | Video intro/outro cards, post-preview components | `record_demo` for real: Chromium + ffmpeg crop + cursor + the three traps above | Recipe schema, `extract_with_recipe`, assertion engine, first fixtures |
 | **5–6** | Insights report components | `synthesize_voiceover` + `compose_video` + TTS cache | Two-stage BD pipeline; the subagent fan-out prompt |
@@ -484,7 +490,7 @@ Two rules: **the agent's screen is the star**, and **the presenter narrates what
 
 | Time | Beat | What the presenter says | What's on screen |
 |---|---|---|---|
-| **0:00–0:20** | The problem | "Every time we ship a feature, someone loses a day making a demo video and writing the posts. This agent does that day." | Studio UI, empty state, clean |
+| **0:00–0:20** | The problem | "Every time we ship a feature, someone loses a day making a demo video and writing the posts. This agent does that day." | Nolan Studio, empty state, clean |
 | **0:20–0:45** | The prompt | "One sentence. That's the whole input." | Types: *"We just shipped dark mode in our dashboard. Make a launch video and a post for LinkedIn and X."* Storyboard lanes start filling |
 | **0:45–1:25** | 🎬 **The money shot** | "It's writing its own Playwright script, and now it's using our product." | Chromium opens the demo app and drives itself — cursor visible, clicking through to dark mode — while the step feed narrates *in sync* |
 | **1:25–1:50** | Narrate + stitch | "Voiceover from the script it wrote. ffmpeg stitches it." | Video renders; plays **inside our UI**; LinkedIn and X drafts appear side by side |
@@ -544,7 +550,7 @@ in writing, while everyone is calm. Sign up to it at hour 0.
 pnpm install
 cp .env.example .env          # OPENAI_API_KEY, BRIGHTDATA_API_TOKEN
 pnpm harness                  # MCP_CATALOG_PATH=./harness/mcp-catalog.yaml npx @truefoundry/trueforge
-pnpm setup:agent              # tsx harness/create-agent.ts — registers the agent via the SDK
+pnpm setup:agent              # tsx harness/create-agent.ts — registers the agent "nolan" via the SDK
 pnpm dev                      # tool-server :8081 · studio-ui :5173 · demo-app :5174
 ```
 
