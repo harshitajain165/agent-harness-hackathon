@@ -1,83 +1,56 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
-import { execFileAsync } from "./ffmpeg";
-import { runStep, type RecordStep } from "./record-demo";
 
 const ARTIFACTS_DIR = join(process.cwd(), "public", "artifacts");
-const WIDTH = 1280;
-const HEIGHT = 800;
+// ?? only falls back on undefined/null, not on the empty string .env.example documents this
+// var as defaulting to (`NEXT_PUBLIC_APP_URL=`) — an explicitly-blank value would otherwise
+// survive as "", and `new URL(path, "")` throws, failing every create_image_post call.
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+const CARD_SIZE = 1080;
 
 export type Slide = {
-  /** Navigation only (click/type/press/wait/scroll) — reuses record_demo's step vocabulary,
-   *  but narration/zoom fields are meaningless for a still image and are ignored if present. */
-  steps: RecordStep[];
-  caption: string;
-  /** Optional selector to draw a highlight box around in the final image (e.g. the specific
-   *  feature being called out), captured via its real bounding box just before the screenshot. */
+  /** The card's headline text, e.g. "Pulse STT now supports Spanish". */
+  headline: string;
+  /** Substring of `headline` to render in the accent color, e.g. "Spanish". */
   highlight?: string;
+  /** Optional small label above the logo, e.g. "New" or "Launch". */
+  eyebrow?: string;
+  /** This slide's accompanying post caption — separate text, not rendered onto the image. */
+  caption: string;
 };
 
 export type ImagePost = { images: { src: string; caption: string }[] };
 
-async function drawHighlight(rawPath: string, outPath: string, box: { x: number; y: number; width: number; height: number }) {
-  const pad = 16;
-  const x = Math.max(0, Math.round(box.x - pad));
-  const y = Math.max(0, Math.round(box.y - pad));
-  const w = Math.round(box.width + pad * 2);
-  const h = Math.round(box.height + pad * 2);
-  // drawbox, not drawtext — this ffmpeg build has no libfreetype, so text overlays aren't
-  // available. A highlight box needs no font support and still calls out the feature.
-  await execFileAsync("ffmpeg", [
-    "-y",
-    "-i",
-    rawPath,
-    "-vf",
-    `drawbox=x=${x}:y=${y}:w=${w}:h=${h}:color=#3b82f6@0.9:t=4`,
-    outPath,
-  ]);
-}
-
 /**
- * Generates a static image post (single or carousel): for each slide, navigates to `url`,
- * runs an optional list of nav steps to reach the right state (e.g. scroll to a section,
- * expand something), and takes a real screenshot — no OS permissions, just headless
- * Playwright. Captions are kept as plain accompanying text rather than burned into the image
- * pixels, matching how real social platforms actually separate image content from caption
- * text (and sidestepping the lack of drawtext support in this ffmpeg build).
+ * Generates a static image post (single or carousel): a real branded announcement card per
+ * slide, rendered by our own Next.js template (app/templates/social-card/page.tsx — real
+ * HTML/CSS via Playwright, not a screenshot of the target site, and not ffmpeg drawtext,
+ * which this build doesn't have anyway). The agent supplies the actual headline text itself
+ * (already grounded in the real feature via its own research) rather than us navigating
+ * anywhere to read it.
  */
-export async function createImagePost(url: string, slides: Slide[]): Promise<ImagePost> {
+export async function createImagePost(slides: Slide[]): Promise<ImagePost> {
   await mkdir(ARTIFACTS_DIR, { recursive: true });
   const browser = await chromium.launch({ headless: true });
   const images: { src: string; caption: string }[] = [];
 
   try {
     for (const slide of slides) {
-      const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT } });
-      await page.goto(url, { waitUntil: "networkidle", timeout: 20_000 });
+      const page = await browser.newPage({ viewport: { width: CARD_SIZE, height: CARD_SIZE } });
 
-      for (const step of slide.steps) await runStep(page, step);
-      await page.waitForTimeout(300);
+      const templateUrl = new URL("/templates/social-card", APP_URL);
+      templateUrl.searchParams.set("headline", slide.headline);
+      if (slide.highlight) templateUrl.searchParams.set("highlight", slide.highlight);
+      if (slide.eyebrow) templateUrl.searchParams.set("eyebrow", slide.eyebrow);
 
-      let highlightBox: { x: number; y: number; width: number; height: number } | null = null;
-      if (slide.highlight) {
-        highlightBox = await page.locator(slide.highlight).first().boundingBox().catch(() => null);
-      }
+      await page.goto(templateUrl.toString(), { waitUntil: "networkidle", timeout: 20_000 });
 
       const filename = `${randomUUID()}.png`;
-      const outPath = join(ARTIFACTS_DIR, filename);
-
-      if (highlightBox) {
-        const rawPath = join(ARTIFACTS_DIR, `${randomUUID()}.raw.png`);
-        await page.screenshot({ path: rawPath });
-        await drawHighlight(rawPath, outPath, highlightBox);
-        await rm(rawPath, { force: true });
-      } else {
-        await page.screenshot({ path: outPath });
-      }
-
+      await page.screenshot({ path: join(ARTIFACTS_DIR, filename) });
       await page.close();
+
       images.push({ src: `/artifacts/${filename}`, caption: slide.caption });
     }
 

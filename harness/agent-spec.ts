@@ -7,9 +7,10 @@ export const BRIGHTDATA_SERVER_NAME = "bright-data";
 /**
  * The agent definition, version-controlled and re-registered by `harness/create-agent.ts`.
  * Phase 1: proves the harness round-trip (real session/turn lifecycle, one approval gate)
- * with stub tools. Phase 2: record_demo (video, with narration/zoom) and create_image_post
- * (single image or carousel) are real, agent-authored media against any http(s) URL, both
- * grounded by inspect_page. Real recipes/Bright Data are later phases.
+ * with stub tools. Phase 2: record_demo (video, with narration/zoom) is a real, agent-authored
+ * recording against any http(s) URL, grounded by inspect_page. create_image_post (single image
+ * or carousel) is a real branded card rendered from our own template, not a page screenshot —
+ * the agent supplies the headline text itself. Real recipes/Bright Data are later phases.
  */
 export const agentSpec: TrueForgeApi.AgentSpec = {
   // The catalog's `name` field uses hyphens (gpt-5-5), not the `model_id`'s dots (gpt-5.5) —
@@ -43,12 +44,14 @@ export const agentSpec: TrueForgeApi.AgentSpec = {
     "single step — pauses are fine), and set zoom: true on whichever click/scroll step shows " +
     "the actual feature landing, so the viewer's eye is pulled to it.\n" +
     "- Image post: when asked for a static image / image post, call create_image_post with " +
-    "format: \"single\" and exactly one slide — nav steps (if any) to reach the right state, a " +
-    "caption, and optionally a highlight selector to call out the specific element that matters.\n" +
+    "format: \"single\" and exactly one slide — a short, punchy headline (word/phrase in " +
+    "`highlight` gets the accent color, e.g. the specific feature name), and a caption. This " +
+    "renders a real branded announcement card, not a screenshot of the page — you already have " +
+    "the real feature content from your own research, so just write the headline yourself.\n" +
     "- Carousel: when asked for a carousel, call create_image_post with format: \"carousel\" and " +
-    "3-6 slides, each one a distinct angle on the feature (e.g. overview, then a specific " +
-    "detail, then the payoff) — every slide needs its own caption; don't just repeat the same " +
-    "screenshot with different text.\n\n" +
+    "3-6 slides, each one a distinct angle on the feature (e.g. what it is, then a specific " +
+    "detail, then the payoff) with its own headline and caption — don't just repeat the same " +
+    "headline with different captions.\n\n" +
     "Once you have the media, draft the post copy yourself, then call publish_post with the " +
     "drafted copy once you have something ready to ship. publish_post requires human " +
     "approval — always wait for it. " +

@@ -86,11 +86,16 @@ agent can record/screenshot any reachable app or site it's told to.
 
 `create_image_post` (`lib/tools/create-image-post.ts`) generates a static image post (`format:
 "single"`, one slide) or a carousel (`format: "carousel"`, several slides swiped through in
-order) of a feature on any http(s) URL — real Playwright screenshots, same nav-step vocabulary
-as `record_demo` minus narration/zoom (meaningless for a still image). A slide can set
-`highlight: <selector>` to draw a box around the specific element that matters (`ffmpeg drawbox`
-— this build has no `drawtext`/font support, so captions are kept as plain accompanying text
-next to the image rather than burned into it, which is also just how real social posts work).
+order) — a real **branded announcement card** per slide, not a screenshot of the target site.
+Each slide is Playwright-screenshotting our own template page
+(`app/templates/social-card/page.tsx`, real HTML/CSS reusing this app's Aeonik Pro font and
+`SmallestLogo`), given `headline`/`highlight`/`eyebrow`/`caption` text the agent authors itself
+— it already has the real feature content from its own research, so no page navigation is
+needed for the image at all. This also sidesteps the lack of `drawtext`/font support in this
+ffmpeg build entirely: real browser text rendering, not image compositing. Captions stay as
+plain accompanying text next to the image rather than burned into it, matching how real social
+posts work. Card colors/background art are a visual approximation, not sourced from an official
+brand style guide — adjust `ACCENT` in the template if the real spec differs.
 
 `app/api/mcp/route.ts` is unauthenticated by default (frictionless for local dev), but it launches
 a real browser and writes real files on every `record_demo`/`create_image_post` call. Set

@@ -21,8 +21,9 @@ export const runtime = "nodejs";
  * - `record_demo` (plain, no approval): real Playwright recording of an agent-authored
  *   step list against any http(s) URL, with optional OpenAI TTS narration and time-gated
  *   zoom composited in via ffmpeg — see lib/tools/record-demo.ts.
- * - `create_image_post` (plain, no approval): real screenshot(s) of a feature — single image
- *   or carousel — with an optional highlight box, no video/audio — see lib/tools/create-image-post.ts.
+ * - `create_image_post` (plain, no approval): real branded announcement card(s) — single image
+ *   or carousel — rendered from our own template, not a screenshot of the target site — see
+ *   lib/tools/create-image-post.ts and app/templates/social-card/page.tsx.
  * - `publish_post` (`destructiveHint: true`, so TrueForge's default
  *   `require_approval_for_tools` pauses the turn for it): still a stub — writes to an
  *   in-memory outbox. Real distribution (actually posting somewhere) is a later phase.
@@ -64,15 +65,25 @@ const navStepSchema = z.discriminatedUnion("action", [
 ]);
 
 const slideSchema = z.object({
-  steps: z
-    .array(navStepSchema)
-    .max(10)
-    .describe("Nav-only actions to reach this slide's state (e.g. scroll to a section, expand something)"),
-  caption: z.string().describe("This slide's caption text (shown alongside the image, not burned into it)"),
+  // Bounded so the fixed-size template always has room to render it — the template scales
+  // font size down for longer text, but a genuinely unbounded string would still eventually
+  // overflow the card (and hidden-overflow silently clip it) or blow up the query URL.
+  headline: z
+    .string()
+    .min(1)
+    .max(90)
+    .describe('The card\'s headline text, e.g. "Pulse STT now supports Spanish" (max 90 chars)'),
   highlight: z
     .string()
+    .max(90)
     .optional()
-    .describe("Optional selector to draw a highlight box around in the screenshot, calling out that element"),
+    .describe('Substring of headline to render in the accent color, e.g. "Spanish"'),
+  eyebrow: z
+    .string()
+    .max(24)
+    .optional()
+    .describe('Optional short label above the logo, e.g. "New" or "Launch" (max 24 chars)'),
+  caption: z.string().describe("This slide's accompanying post caption (shown next to the image, not on it)"),
 });
 
 // Fake in-memory outbox, so publish_post has somewhere to "publish" to.
@@ -149,21 +160,20 @@ function buildServer() {
     "create_image_post",
     {
       description:
-        "Create a static image post (one screenshot) or a carousel (several screenshots, " +
-        "swiped through in order) of a feature on any http(s) URL. Call inspect_page first to " +
-        "find real selectors for any nav steps or highlights — a selector that doesn't exist " +
-        "on the page will fail. Each slide's caption is separate accompanying text, not burned " +
-        "into the image, matching how real social posts work.",
+        "Create a static image post (one card) or a carousel (several cards, swiped through " +
+        "in order) — a real branded announcement graphic, not a screenshot of the target site. " +
+        "You already have the real feature content from your own research; just supply the " +
+        "headline text per slide. Each slide's caption is separate accompanying text, not " +
+        "burned into the image, matching how real social posts work.",
       inputSchema: {
-        url: httpUrl.describe("The page to screenshot"),
-        feature: z.string().describe("The feature being shown (used for labeling only)"),
+        feature: z.string().describe("The feature being announced (used for labeling only)"),
         format: z.enum(["single", "carousel"]).describe("single = exactly one slide, carousel = several"),
-        slides: z.array(slideSchema).min(1).max(10).describe("One entry per image, in order"),
+        slides: z.array(slideSchema).min(1).max(10).describe("One entry per card, in order"),
       },
     },
-    async ({ url, feature, format, slides }) => {
+    async ({ feature, format, slides }) => {
       try {
-        const post = await createImagePost(url, slides as Slide[]);
+        const post = await createImagePost(slides as Slide[]);
         // Same reasoning as record_demo: JSON-in-text is the only channel available for
         // structured data once TrueForge flattens the tool response to a single string.
         return { content: [{ type: "text", text: JSON.stringify({ feature, format, ...post }) }] };
