@@ -280,12 +280,18 @@ test('a subscription predating its video is not attributed to it', () => {
 
 test('every seeded subscription postdates the video it is attributed to', () => {
   // Guards the fixture itself: mislabelled dates silently inflate the demo's numbers.
-  const campaigns = JSON.parse(readFileSync('fixtures/revenue/campaigns.json', 'utf8')).campaigns;
-  const subs = JSON.parse(readFileSync('fixtures/revenue/subscriptions.json', 'utf8')).subscriptions;
-  const publishedAt = new Map(campaigns.map((c: any) => [c.videoId, Date.parse(c.publishedAt)]));
-  for (const s of subs) {
-    const pub = publishedAt.get(s.metadata.video_id);
-    assert.ok(Date.parse(s.createdAt) >= pub, `${s.id} predates ${s.metadata.video_id}`);
+  const campaigns = JSON.parse(readFileSync('fixtures/revenue/campaigns.json', 'utf8'))
+    .campaigns as { videoId: string; publishedAt: string }[];
+  const subs = JSON.parse(readFileSync('fixtures/revenue/subscriptions.json', 'utf8'))
+    .subscriptions as { id: string; createdAt: string; metadata: Record<string, string> }[];
+
+  const publishedAt = new Map<string, number>(
+    campaigns.map((c) => [c.videoId, Date.parse(c.publishedAt)])
+  );
+  for (const sub of subs) {
+    const pub = publishedAt.get(sub.metadata.video_id);
+    assert.ok(pub !== undefined, `${sub.id} references an unknown video_id`);
+    assert.ok(Date.parse(sub.createdAt) >= pub, `${sub.id} predates ${sub.metadata.video_id}`);
   }
 });
 
