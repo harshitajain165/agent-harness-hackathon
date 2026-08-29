@@ -2,6 +2,7 @@ import type { TrueForgeApi } from "@truefoundry/trueforge-sdk";
 
 export const AGENT_NAME = process.env.TRUEFORGE_AGENT_NAME ?? "nolan";
 export const MCP_SERVER_NAME = "nolan-tools";
+export const BRIGHTDATA_SERVER_NAME = "bright-data";
 
 /**
  * The agent definition, version-controlled and re-registered by `harness/create-agent.ts`.
@@ -15,8 +16,17 @@ export const agentSpec: TrueForgeApi.AgentSpec = {
   // verify the exact FQN in Settings → Models / GET /api/v1/models if this ever 422s.
   model: { name: process.env.TRUEFORGE_MODEL ?? "openai/gpt-5-5" },
   instructions:
-    "You are Nolan, an AI product-marketing agent. When asked to make a launch post of a " +
-    "feature: first call inspect_page on the target URL to see its real interactive elements " +
+    "You are Nolan, an AI product-marketing agent.\n\n" +
+    "RESEARCH FIRST. When the person names competitors, research them before writing any " +
+    "script or copy. Use search_engine to find each one's recent launch videos and posts, " +
+    "then delegate one subagent per competitor to fetch and summarise them — those are slow, " +
+    "independent calls, so run them in parallel. Have each subagent return only a short " +
+    "structured summary: duration, views, engagement, and how the video opens. Use " +
+    "analyze_video on each transcript rather than eyeballing it, so the numbers you quote " +
+    "are measured, not impressions. If a competitor has no findable video presence, say so " +
+    "plainly rather than analysing unrelated content you happened to find.\n\n" +
+    "THEN BUILD THE MEDIA. " +
+    "First call inspect_page on the target URL to see its real interactive elements " +
     "and their selectors — never guess a selector. If the person doesn't name a URL, use " +
     (process.env.DEMO_APP_URL ?? "http://localhost:3100") +
     " as the default target. On a site with a collapsed sidebar/accordion (common on docs " +
@@ -41,7 +51,9 @@ export const agentSpec: TrueForgeApi.AgentSpec = {
     "screenshot with different text.\n\n" +
     "Once you have the media, draft the post copy yourself, then call publish_post with the " +
     "drafted copy once you have something ready to ship. publish_post requires human " +
-    "approval — always wait for it.",
+    "approval — always wait for it. " +
+    "\n\nLet the research shape the work, and say which finding shaped which choice — the " +
+    "length you chose, how you opened, what you left out.",
   mcpServers: [
     {
       name: MCP_SERVER_NAME,
@@ -53,6 +65,21 @@ export const agentSpec: TrueForgeApi.AgentSpec = {
       // requireApprovalForTools defaults to ["@write", "@destructive"], which already
       // covers publish_post (annotated destructiveHint: true) — nothing extra needed.
     },
+    {
+      name: BRIGHTDATA_SERVER_NAME,
+      // Bright Data exposes 33 tools on the groups we enable (69 in total). Loading
+      // every schema upfront would cost more context than the rest of the agent, so
+      // name the six we actually use and leave discovery deferred.
+      enableTools: [
+        "search_engine",
+        "scrape_as_markdown",
+        "scrape_as_html",
+        "web_data_linkedin_posts",
+        "web_data_x_posts",
+        "web_data_youtube_videos",
+      ],
+      preload: false,
+    },
   ],
   config: {
     sandbox: { enabled: false },
@@ -60,8 +87,11 @@ export const agentSpec: TrueForgeApi.AgentSpec = {
     // each, so a multi-competitor turn can approach that; the ceiling is a
     // runaway-loop stop, not a quality lever, so raise it well clear.
     iterationLimit: 200,
-    // Off for Phase 1: no thread.created/thread.done to handle yet — that's parallel
-    // subagent lanes, a later phase that also needs a UI change we're not making now.
-    dynamicSubAgents: { enabled: false },
+    // On: competitor research is several independent, slow fetches (~75s each for a
+    // YouTube video), so the agent fans out one subagent per competitor and they run
+    // concurrently. thread.created/thread.done are mapped onto thinking steps in
+    // lib/agent/trueforge/map-event.ts, and only the root thread's prose reaches the
+    // reply — subagent text would otherwise interleave into a single stream.
+    dynamicSubAgents: { enabled: true },
   },
 };

@@ -32,7 +32,7 @@ async function main() {
   // and evaluated before this file's own top-level statements run, so agent-spec.ts's
   // process.env reads (TRUEFORGE_AGENT_NAME, TRUEFORGE_MODEL) would see an empty
   // environment and silently fall back to defaults regardless of .env.local.
-  const { AGENT_NAME, MCP_SERVER_NAME, agentSpec } = await import("./agent-spec");
+  const { AGENT_NAME, MCP_SERVER_NAME, BRIGHTDATA_SERVER_NAME, agentSpec } = await import("./agent-spec");
   const { TrueForge } = await import("@truefoundry/trueforge-sdk");
 
   const baseUrl = process.env.TRUEFORGE_BASE_URL ?? "http://localhost:8790";
@@ -53,6 +53,29 @@ async function main() {
       ...(mcpSecret ? { auth: { type: "header", headers: { "x-mcp-secret": mcpSecret } } } : {}),
     },
   });
+
+  // Bright Data's hosted MCP server. The `groups` query parameter is required: without
+  // it only the five base tools are exposed and none of the web_data_* social ones exist.
+  // Bearer-header auth keeps the token out of the URL (it also accepts ?token=, verified).
+  const brightDataToken = process.env.BRIGHTDATA_API_TOKEN;
+  if (brightDataToken) {
+    const brightDataUrl = "https://mcp.brightdata.com/mcp?groups=social,advanced_scraping";
+    console.log(`Registering MCP server "${BRIGHTDATA_SERVER_NAME}" -> ${brightDataUrl}`);
+    await client.settings.mcpServers.createOrUpdate({
+      manifest: {
+        name: BRIGHTDATA_SERVER_NAME,
+        type: "remote",
+        url: brightDataUrl,
+        description: "Bright Data: web search and structured social/video data.",
+        auth: { type: "header", headers: { Authorization: `Bearer ${brightDataToken}` } },
+      },
+    });
+  } else {
+    console.warn(
+      `BRIGHTDATA_API_TOKEN is not set — skipping "${BRIGHTDATA_SERVER_NAME}". ` +
+        "The agent spec still references it, so competitor research will fail until it is configured."
+    );
+  }
 
   console.log(`Registering agent "${AGENT_NAME}"`);
   const { data: existing } = await client.agents.list();
