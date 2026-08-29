@@ -297,6 +297,18 @@ export function ShareIcon(props: IconProps) {
   return <Icon name="IconShareOs" {...props} />;
 }
 
+export function ExportIcon(props: IconProps) {
+  return <Icon name="IconArrowOutOfBox" {...props} />;
+}
+
+export function MegaphoneIcon(props: IconProps) {
+  return <Icon name="IconMegaphone" {...props} />;
+}
+
+export function RewriteIcon(props: IconProps) {
+  return <Icon name="IconRewrite" {...props} />;
+}
+
 export function ThumbsUpIcon(props: IconProps) {
   return <Icon name="IconThumbsUp" {...props} />;
 }
@@ -341,6 +353,7 @@ ControlIcon.displayName = "ControlIcon";
 CopyIcon.displayName = "CopyIcon";
 EnterIcon.displayName = "EnterIcon";
 EscIcon.displayName = "EscIcon";
+ExportIcon.displayName = "ExportIcon";
 FilterIcon.displayName = "FilterIcon";
 FlagIcon.displayName = "FlagIcon";
 GlobeIcon.displayName = "GlobeIcon";
@@ -350,6 +363,7 @@ HistoryIcon.displayName = "HistoryIcon";
 HomeIcon.displayName = "HomeIcon";
 ItalicIcon.displayName = "ItalicIcon";
 LoaderIcon.displayName = "LoaderIcon";
+MegaphoneIcon.displayName = "MegaphoneIcon";
 MenuIcon.displayName = "MenuIcon";
 MinusIcon.displayName = "MinusIcon";
 MonitorIcon.displayName = "MonitorIcon";
@@ -362,6 +376,7 @@ PinIcon.displayName = "PinIcon";
 PlayIcon.displayName = "PlayIcon";
 PlusIcon.displayName = "PlusIcon";
 RepeatIcon.displayName = "RepeatIcon";
+RewriteIcon.displayName = "RewriteIcon";
 SearchIcon.displayName = "SearchIcon";
 SendIcon.displayName = "SendIcon";
 SettingsIcon.displayName = "SettingsIcon";

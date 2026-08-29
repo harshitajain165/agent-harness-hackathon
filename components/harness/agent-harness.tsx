@@ -108,7 +108,7 @@ function emptyAssistant(): AssistantBody {
   return {
     thinking: true,
     thinkingVariant: "search",
-    thinkingLabel: "Searching the web",
+    thinkingLabel: "Searching with Bright Data",
     text: "",
     streaming: true,
     tools: [],
@@ -167,6 +167,7 @@ function AssistantTurn({
   busy,
   onResolve,
   onFollowUp,
+  followUpHotkeys,
 }: {
   message: AssistantMsg;
   prompt: string;
@@ -174,6 +175,7 @@ function AssistantTurn({
   busy?: boolean;
   onResolve: (messageId: string, accepted: boolean, answers: Record<string, string | string[]>) => void;
   onFollowUp: (item: FollowUp, video?: Extract<Artifact, { kind: "video" }>) => void;
+  followUpHotkeys?: boolean;
 }) {
   const { body } = message;
   const records = body.artifacts.find((item): item is Extract<Artifact, { kind: "records" }> => item.kind === "records");
@@ -235,6 +237,7 @@ function AssistantTurn({
         <FollowUpList
           items={VIDEO_FOLLOW_UPS}
           disabled={busy}
+          hotkeys={followUpHotkeys}
           onFollowUp={(item) => onFollowUp(item, video)}
         />
       ) : null}
@@ -542,6 +545,7 @@ export function AgentHarness() {
                         busy={busy}
                         onResolve={resolveApproval}
                         onFollowUp={handleVideoFollowUp}
+                        followUpHotkeys={message.id === lastAssistant?.id}
                       />
                     )
                   )}
@@ -605,7 +609,6 @@ export function AgentHarness() {
               <ChannelPreviews
                 artifact={paneArtifact}
                 prompt={lastUser?.text}
-                onClose={() => setClosedPane(chat.id)}
               />
             ) : (
               <>

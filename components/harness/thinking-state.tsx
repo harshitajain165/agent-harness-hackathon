@@ -278,13 +278,13 @@ export function ThinkingState({
   const activeLabel =
     label ??
     (variant === "search"
-      ? "Searching the web"
+      ? "Searching with Bright Data"
       : variant === "coding"
         ? "Running tools"
         : "Thinking");
   const doneLabel =
     variant === "search"
-      ? "Searched the web"
+      ? "Searched with Bright Data"
       : variant === "coding"
         ? `Ran ${resolvedRows.length || 3} tools`
         : resolvedRows.length
@@ -308,9 +308,19 @@ export function ThinkingState({
         onClick={() => setManualExpanded((current) => !(current ?? autoExpanded))}
         className="-mx-1.5 flex w-fit items-center gap-2 rounded-[10px] px-1.5 py-1 transition-colors duration-150 hover:bg-neutral-100"
       >
-        <SparkleCentralIcon
-          className={cn("size-4", working ? "text-fg-secondary" : "text-fg-tertiary")}
-        />
+        {variant === "search" ? (
+          <img
+            src="/brands/brightdata.svg"
+            alt=""
+            width={16}
+            height={16}
+            className="size-4 shrink-0 rounded"
+          />
+        ) : (
+          <SparkleCentralIcon
+            className={cn("size-4", working ? "text-fg-secondary" : "text-fg-tertiary")}
+          />
+        )}
         {working ? (
           <span
             role="status"

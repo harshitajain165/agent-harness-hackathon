@@ -6,7 +6,6 @@ import {
   BookmarkIcon,
   ChatBubbleIcon,
   CheckCircleIcon,
-  CloseIcon,
   GlobeIcon,
   HeartIcon,
   MoreHorizontalIcon,
@@ -20,12 +19,55 @@ import {
 } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
-import type { VideoArtifact } from "@/lib/agent/types";
+import type { VideoArtifact, VideoClip } from "@/lib/agent/types";
 import { cn } from "@/lib/utils";
+import { TimelineTrack } from "./timeline-track";
+
+export type SectionKind = "text-animation" | "video-gif";
+
+type PreviewSection = VideoClip & { kind: SectionKind };
+
+const DEMO_BEATS: { id: string; label: string; frac: number; kind: SectionKind }[] = [
+  { id: "hook", label: "Hook", frac: 0.12, kind: "text-animation" },
+  { id: "problem", label: "Problem", frac: 0.18, kind: "text-animation" },
+  { id: "product", label: "Product", frac: 0.32, kind: "video-gif" },
+  { id: "proof", label: "Proof", frac: 0.22, kind: "video-gif" },
+  { id: "cta", label: "CTA", frac: 0.16, kind: "text-animation" },
+];
+
+function defaultKind(clip: VideoClip, index: number, total: number): SectionKind {
+  const label = clip.label.toLowerCase();
+  if (/intro|outro|title|cta|hook|problem/.test(label)) return "text-animation";
+  if (/demo|product|walkthrough|screen|proof/.test(label)) return "video-gif";
+  if (index === 0 || index === total - 1) return "text-animation";
+  return "video-gif";
+}
+
+function sectionsFromArtifact(artifact: VideoArtifact): PreviewSection[] {
+  const clips = artifact.clips;
+  if (clips.length >= 2) {
+    return clips.map((clip, index) => ({
+      ...clip,
+      kind: defaultKind(clip, index, clips.length),
+    }));
+  }
+  const duration = artifact.durationMs > 0 ? artifact.durationMs : 40_000;
+  let cursor = 0;
+  return DEMO_BEATS.map((beat, index) => {
+    const startMs = cursor;
+    const endMs =
+      index === DEMO_BEATS.length - 1 ? duration : Math.round(cursor + duration * beat.frac);
+    cursor = endMs;
+    return { id: beat.id, label: beat.label, startMs, endMs, kind: beat.kind };
+  });
+}
+
+function artifactKey(artifact: VideoArtifact) {
+  return `${artifact.src ?? ""}:${artifact.durationMs}:${artifact.clips.map((clip) => clip.id).join(",")}`;
+}
 
 export type ChannelId = "x" | "linkedin";
 
@@ -386,15 +428,43 @@ function LinkedInPost({
 export function ChannelPreviews({
   artifact,
   prompt,
-  onClose,
 }: {
   artifact: VideoArtifact;
   prompt?: string;
-  onClose: () => void;
 }) {
   const [channel, setChannel] = useState<ChannelId>("x");
+  const [editing, setEditing] = useState(false);
+  const [sections, setSections] = useState<PreviewSection[]>(() => sectionsFromArtifact(artifact));
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const videoKey = artifactKey(artifact);
   const author = resolveAuthor(artifact, prompt);
   const copy = resolveCopy(artifact, prompt, author);
+  const selected = sections.find((section) => section.id === selectedId);
+  const durationMs = Math.max(
+    artifact.durationMs,
+    sections.at(-1)?.endMs ?? 0,
+    1
+  );
+
+  useEffect(() => {
+    setSections(sectionsFromArtifact(artifact));
+    setSelectedId(undefined);
+    setEditing(false);
+    // Session edit state is local to the current pane video.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoKey]);
+
+  const enterEdit = () => {
+    setSelectedId((id) => id ?? sections[0]?.id);
+    setEditing(true);
+  };
+
+  const setSelectedKind = (kind: SectionKind) => {
+    if (!selectedId) return;
+    setSections((current) =>
+      current.map((section) => (section.id === selectedId ? { ...section, kind } : section))
+    );
+  };
 
   return (
     <Tabs
@@ -402,39 +472,84 @@ export function ChannelPreviews({
       onValueChange={(value) => setChannel(value as ChannelId)}
       className="flex h-full min-h-0 flex-col gap-0"
     >
-      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border-default px-3">
+      <div className="flex shrink-0 items-center justify-center bg-neutral-150 px-3 pt-3 pb-2">
         <TabsList variant="primary">
           <TabsTrigger value="x">X</TabsTrigger>
           <TabsTrigger value="linkedin">LinkedIn</TabsTrigger>
         </TabsList>
-        <IconButton aria-label="Close pane" variant="transparent" size="sm" onClick={onClose}>
-          <CloseIcon className="size-3.5" />
-        </IconButton>
       </div>
-      <ScrollArea className="min-h-0 flex-1 bg-neutral-100" scrollFade>
-        <div className="grid p-4">
-          <div
-            className={cn(
-              "col-start-1 row-start-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none",
-              channel === "x" ? "z-10 translate-y-0 opacity-100" : "pointer-events-none z-0 translate-y-1 opacity-0"
-            )}
-            aria-hidden={channel !== "x"}
-          >
-            <XPost artifact={artifact} author={author} copy={copy} active={channel === "x"} />
-          </div>
-          <div
-            className={cn(
-              "col-start-1 row-start-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none",
-              channel === "linkedin"
-                ? "z-10 translate-y-0 opacity-100"
-                : "pointer-events-none z-0 translate-y-1 opacity-0"
-            )}
-            aria-hidden={channel !== "linkedin"}
-          >
-            <LinkedInPost artifact={artifact} author={author} copy={copy} active={channel === "linkedin"} />
+      <ScrollArea className="min-h-0 flex-1 bg-neutral-150" scrollFade>
+        <div className="flex min-h-full items-center justify-center p-6">
+          <div className="grid w-full max-w-[400px]">
+            <div
+              className={cn(
+                "col-start-1 row-start-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none",
+                channel === "x" ? "z-10 translate-y-0 opacity-100" : "pointer-events-none z-0 translate-y-1 opacity-0"
+              )}
+              aria-hidden={channel !== "x"}
+              inert={channel !== "x" ? true : undefined}
+            >
+              <XPost artifact={artifact} author={author} copy={copy} active={channel === "x"} />
+            </div>
+            <div
+              className={cn(
+                "col-start-1 row-start-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none",
+                channel === "linkedin"
+                  ? "z-10 translate-y-0 opacity-100"
+                  : "pointer-events-none z-0 translate-y-1 opacity-0"
+              )}
+              aria-hidden={channel !== "linkedin"}
+              inert={channel !== "linkedin" ? true : undefined}
+            >
+              <LinkedInPost artifact={artifact} author={author} copy={copy} active={channel === "linkedin"} />
+            </div>
           </div>
         </div>
       </ScrollArea>
+      <div className="shrink-0 bg-neutral-150 px-4 pt-1 pb-4">
+        {editing ? (
+          <div className="flex flex-col gap-3">
+            <TimelineTrack
+              clips={sections}
+              durationMs={durationMs}
+              selectedId={selectedId}
+              onSelect={(clip) => setSelectedId(clip.id)}
+              showRuler={false}
+            />
+            {selected ? (
+              <div className="flex items-baseline justify-between gap-2">
+                <Text size="sm" weight="medium">
+                  {selected.label}
+                </Text>
+                <Text size="sm" color="tertiary" className="tabular-nums">
+                  {clock(selected.startMs)} – {clock(selected.endMs)}
+                </Text>
+              </div>
+            ) : null}
+            <Tabs
+              value={selected?.kind ?? "text-animation"}
+              onValueChange={(value) => setSelectedKind(value as SectionKind)}
+              className="gap-0"
+            >
+              <TabsList variant="primary" className="w-full">
+                <TabsTrigger value="text-animation" className="flex-1">
+                  Text animation
+                </TabsTrigger>
+                <TabsTrigger value="video-gif" className="flex-1">
+                  Video GIF
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button type="button" variant="secondary" size="md" className="w-full" onClick={() => setEditing(false)}>
+              Done
+            </Button>
+          </div>
+        ) : (
+          <Button type="button" variant="secondary" size="md" className="w-full" onClick={enterEdit}>
+            Edit
+          </Button>
+        )}
+      </div>
     </Tabs>
   );
 }

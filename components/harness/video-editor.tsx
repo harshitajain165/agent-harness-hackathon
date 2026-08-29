@@ -5,7 +5,7 @@ import { PauseIcon, PlayIcon } from "@/components/icons";
 import { IconButton } from "@/components/ui/icon-button";
 import { Text } from "@/components/ui/text";
 import type { VideoArtifact, VideoClip } from "@/lib/agent/types";
-import { cn } from "@/lib/utils";
+import { TimelineTrack } from "./timeline-track";
 
 function clock(ms: number) {
   const seconds = Math.max(0, Math.floor(ms / 1000));
@@ -17,7 +17,6 @@ function clipAt(clips: VideoClip[], time: number) {
 }
 
 export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
-  const laneRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -62,14 +61,6 @@ export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
     if (hasVideo && videoRef.current) videoRef.current.currentTime = clamped / 1000;
   };
 
-  const seekFromClientX = (clientX: number) => {
-    const lane = laneRef.current;
-    if (!lane) return;
-    const rect = lane.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    seek(((clientX - rect.left) / rect.width) * duration);
-  };
-
   return (
     <div className="flex h-full min-h-0 flex-col opacity-100 transition-opacity duration-200 ease-[var(--ease-out)] starting:opacity-0 motion-reduce:transition-none">
       <div className="relative mx-3 mt-3 aspect-video overflow-hidden rounded-[10px] bg-neutral-950">
@@ -108,75 +99,21 @@ export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
       </div>
 
       <div className="min-h-0 flex-1 border-t border-border-default px-3 py-2">
-        <div className="relative mb-1 h-4">
-          {[0, 10, 20, 30, 40]
-            .filter((mark) => mark * 1000 <= duration)
-            .map((mark) => (
-              <span
-                key={mark}
-                className="absolute -translate-x-1/2 text-sm text-fg-tertiary"
-                style={{ left: `${(mark * 1000) / duration * 100}%` }}
-              >
-                {mark}s
-              </span>
-            ))}
-        </div>
-        <div
-          ref={laneRef}
-          className="relative h-9"
-          onPointerDown={(event) => {
-            if ((event.target as HTMLElement).closest("button")) return;
-            const lane = laneRef.current;
-            if (!lane) return;
-            lane.setPointerCapture(event.pointerId);
+        <TimelineTrack
+          clips={artifact.clips}
+          durationMs={duration}
+          selectedId={selectedId}
+          time={time}
+          onSelect={(clip) => {
+            setSelectedId(clip.id);
+            seek(clip.startMs);
             setPlaying(false);
-            seekFromClientX(event.clientX);
           }}
-          onPointerMove={(event) => {
-            if (!laneRef.current?.hasPointerCapture(event.pointerId)) return;
-            seekFromClientX(event.clientX);
+          onSeek={(next) => {
+            setPlaying(false);
+            seek(next);
           }}
-          onPointerUp={(event) => {
-            if (laneRef.current?.hasPointerCapture(event.pointerId)) {
-              laneRef.current.releasePointerCapture(event.pointerId);
-            }
-          }}
-          onPointerCancel={(event) => {
-            if (laneRef.current?.hasPointerCapture(event.pointerId)) {
-              laneRef.current.releasePointerCapture(event.pointerId);
-            }
-          }}
-        >
-          {artifact.clips.map((clip) => {
-            const active = selectedId === clip.id;
-            return (
-              <button
-                key={clip.id}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setSelectedId(clip.id);
-                  seek(clip.startMs);
-                  setPlaying(false);
-                }}
-                className={cn(
-                  "absolute top-1 bottom-1 truncate rounded-[7px] px-1.5 text-left text-sm",
-                  active ? "bg-neutral-950 text-on-inverted" : "bg-neutral-200 text-fg"
-                )}
-                style={{
-                  left: `${(clip.startMs / duration) * 100}%`,
-                  width: `${((clip.endMs - clip.startMs) / duration) * 100}%`,
-                }}
-              >
-                {clip.label}
-              </button>
-            );
-          })}
-          <div
-            className="pointer-events-none absolute inset-y-0 w-px bg-brand-solid"
-            style={{ left: `${(time / duration) * 100}%` }}
-          />
-        </div>
+        />
       </div>
 
       {selected ? (
