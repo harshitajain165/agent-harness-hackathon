@@ -76,16 +76,26 @@ Both are optional and independent — narration-only, zoom-only, both, or neithe
 the video is still re-encoded to mp4, just without any filters applied) all work.
 
 Since the agent has no vision, it can't guess real selectors on a page it's never seen — that's
-what `inspect_page(url)` is for: it loads the page and returns its actual interactive elements
-with a usable selector for each (`harness/agent-spec.ts`'s instructions tell the agent to always
-call this first). `DEMO_APP_URL` (defaults to `http://localhost:3100`) is just the **suggested
-default target** when nobody names a URL — the agent can record any reachable app or site it's
-told to.
+what `inspect_page(url, steps?)` is for: it loads the page and returns its actual interactive
+elements with a usable selector for each (`harness/agent-spec.ts`'s instructions tell the agent
+to always call this first). It also accepts optional nav `steps` to run before listing — e.g.
+clicking to expand a collapsed sidebar accordion — since on real sites (docs sites especially) a
+section's children genuinely aren't in the page until expanded. `DEMO_APP_URL` (defaults to
+`http://localhost:3100`) is just the **suggested default target** when nobody names a URL — the
+agent can record/screenshot any reachable app or site it's told to.
+
+`create_image_post` (`lib/tools/create-image-post.ts`) generates a static image post (`format:
+"single"`, one slide) or a carousel (`format: "carousel"`, several slides swiped through in
+order) of a feature on any http(s) URL — real Playwright screenshots, same nav-step vocabulary
+as `record_demo` minus narration/zoom (meaningless for a still image). A slide can set
+`highlight: <selector>` to draw a box around the specific element that matters (`ffmpeg drawbox`
+— this build has no `drawtext`/font support, so captions are kept as plain accompanying text
+next to the image rather than burned into it, which is also just how real social posts work).
 
 `app/api/mcp/route.ts` is unauthenticated by default (frictionless for local dev), but it launches
-a real browser and writes real files on every `record_demo` call. Set `MCP_SECRET` to require a
-matching `x-mcp-secret` header — `pnpm setup:agent` picks it up automatically and registers it on
-the MCP server manifest so TrueForge sends it on every call.
+a real browser and writes real files on every `record_demo`/`create_image_post` call. Set
+`MCP_SECRET` to require a matching `x-mcp-secret` header — `pnpm setup:agent` picks it up
+automatically and registers it on the MCP server manifest so TrueForge sends it on every call.
 
 ### Generic proxy / local mock
 

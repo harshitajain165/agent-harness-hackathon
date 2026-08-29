@@ -56,6 +56,24 @@ function parseRecordingResult(content: string): RecordingResult | null {
   return null;
 }
 
+type ImagePostResult = {
+  feature: string;
+  format: "single" | "carousel";
+  images: { src: string; caption: string }[];
+};
+
+function parseImagePostResult(content: string): ImagePostResult | null {
+  try {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed?.images) && typeof parsed?.format === "string") {
+      return parsed as ImagePostResult;
+    }
+  } catch {
+    // Not JSON (e.g. a tool error message) — not an image post result, fall through.
+  }
+  return null;
+}
+
 function emitToolCallOnce(
   conversationId: string,
   toolCallId: string,
@@ -131,10 +149,11 @@ export function mapTurnEvent(
       emitToolCallOnce(conversationId, event.toolCallId, ctx, emit);
       const cached = getConversation(conversationId)?.toolCalls.get(event.toolCallId);
 
-      // record_demo returns structured data (JSON) inside the text content — see
-      // lib/tools/record-demo.ts and app/api/mcp/route.ts for why it has to be JSON-in-text
-      // rather than a separate content part. Surface it as a real video artifact.
+      // record_demo/create_image_post return structured data (JSON) inside the text content —
+      // see their tool files and app/api/mcp/route.ts for why it has to be JSON-in-text rather
+      // than a separate content part. Surface them as real artifacts.
       const recording = cached?.name === "record_demo" ? parseRecordingResult(event.content) : null;
+      const imagePost = cached?.name === "create_image_post" ? parseImagePostResult(event.content) : null;
 
       emit({
         type: "tool_result",
@@ -142,7 +161,11 @@ export function mapTurnEvent(
           id: event.toolCallId,
           name: cached?.name ?? "tool",
           status: "done",
-          detail: recording ? `Recorded a demo of "${recording.feature}"` : event.content,
+          detail: recording
+            ? `Recorded a demo of "${recording.feature}"`
+            : imagePost
+              ? `Created a ${imagePost.format} image post for "${imagePost.feature}"`
+              : event.content,
         },
       });
 
@@ -155,6 +178,18 @@ export function mapTurnEvent(
             durationMs: recording.durationMs,
             clips: recording.clips,
             src: recording.video,
+          },
+        });
+      }
+
+      if (imagePost) {
+        emit({
+          type: "artifact",
+          data: {
+            kind: "image_post",
+            title: `${imagePost.format === "carousel" ? "Carousel" : "Image post"} — ${imagePost.feature}`,
+            format: imagePost.format,
+            images: imagePost.images,
           },
         });
       }

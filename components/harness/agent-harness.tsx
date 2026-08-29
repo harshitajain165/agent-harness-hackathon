@@ -18,6 +18,7 @@ import type {
 } from "@/lib/agent/types";
 import { ApprovalCard } from "./approval-card";
 import { DiffTable } from "./diff-table";
+import { ImagePostViewer } from "./image-post-viewer";
 import { PromptBar } from "./prompt-bar";
 import { RecordsTable } from "./records-table";
 import { SidebarNav, type SidebarTab } from "./sidebar-nav";
@@ -57,7 +58,7 @@ type Conversation = {
   messages: ThreadMessage[];
 };
 
-const PANE_KINDS = new Set<Artifact["kind"]>(["records", "video"]);
+const PANE_KINDS = new Set<Artifact["kind"]>(["records", "video", "image_post"]);
 const VIDEO_INTENT = /\b(video|footage|studio|film)\b/i;
 const VIDEO_FOLLOW_UP_INTENT = /\b(slack|export|publish)\b/i;
 
@@ -177,6 +178,9 @@ function AssistantTurn({
   const { body } = message;
   const records = body.artifacts.find((item): item is Extract<Artifact, { kind: "records" }> => item.kind === "records");
   const video = body.artifacts.find((item): item is Extract<Artifact, { kind: "video" }> => item.kind === "video");
+  const imagePost = body.artifacts.find(
+    (item): item is Extract<Artifact, { kind: "image_post" }> => item.kind === "image_post"
+  );
   const diffs = body.artifacts.filter((item): item is Extract<Artifact, { kind: "diff" }> => item.kind === "diff");
   const liveSearch = liveSearchFromTurn({
     query: body.thinkingQuery ?? prompt,
@@ -233,6 +237,11 @@ function AssistantTurn({
           disabled={busy}
           onFollowUp={(item) => onFollowUp(item, video)}
         />
+      ) : null}
+      {imagePost && !body.streaming ? (
+        <div className="h-[480px] overflow-hidden rounded-[14px] bg-neutral-0 shadow-sm lg:hidden">
+          <ImagePostViewer artifact={imagePost} />
+        </div>
       ) : null}
     </article>
   );
@@ -587,7 +596,9 @@ export function AgentHarness() {
         {view === "chat" && showPane ? (
           <aside
             className={`hidden shrink-0 flex-col overflow-hidden rounded-[14px] bg-neutral-0 shadow-sm lg:flex ${
-              creatingVideo || paneArtifact?.kind === "video" ? "w-[min(520px,42vw)]" : "w-[360px]"
+              creatingVideo || paneArtifact?.kind === "video" || paneArtifact?.kind === "image_post"
+                ? "w-[min(520px,42vw)]"
+                : "w-[360px]"
             }`}
           >
             {paneArtifact?.kind === "video" ? (
@@ -613,11 +624,14 @@ export function AgentHarness() {
                 </div>
                 <div
                   className={
-                    creatingVideo ? "min-h-0 flex-1" : "min-h-0 flex-1 overflow-y-auto p-3"
+                    creatingVideo || paneArtifact?.kind === "image_post"
+                      ? "min-h-0 flex-1"
+                      : "min-h-0 flex-1 overflow-y-auto p-3"
                   }
                 >
                   {creatingVideo ? <VideoCreating /> : null}
                   {paneArtifact?.kind === "records" ? <RecordsTable artifact={paneArtifact} /> : null}
+                  {paneArtifact?.kind === "image_post" ? <ImagePostViewer artifact={paneArtifact} /> : null}
                 </div>
               </>
             )}

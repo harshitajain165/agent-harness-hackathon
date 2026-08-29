@@ -79,7 +79,19 @@ export type VideoArtifact = {
   src?: string;
 };
 
-export type Artifact = RecordsArtifact | DiffArtifact | VideoArtifact;
+export type ImagePostImage = {
+  src: string;
+  caption?: string;
+};
+
+export type ImagePostArtifact = {
+  kind: "image_post";
+  title: string;
+  format: "single" | "carousel";
+  images: ImagePostImage[];
+};
+
+export type Artifact = RecordsArtifact | DiffArtifact | VideoArtifact | ImagePostArtifact;
 
 export type AgentEvent =
   | {
