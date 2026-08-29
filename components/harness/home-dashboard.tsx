@@ -17,11 +17,12 @@ import {
   IMPRESSION_WINDOWS,
   sumImpressions,
 } from "@/lib/home/impressions";
+import { useLiveImpressions } from "@/lib/home/live-impressions";
 import { formatRevenueAmount, sumVideoRevenue } from "@/lib/home/revenue";
 import { HOME_PERIODS, type HomeDashboardProps, type HomePeriod } from "@/lib/home/types";
 import type { AttributedStripeRevenue } from "@/lib/stripe/attributed-revenue";
 import { cn } from "@/lib/utils";
-import { HomeRankedLists, SAMPLE_VIDEOS } from "./home-ranked-lists";
+import { HomeRankedLists } from "./home-ranked-lists";
 
 type RevenueState =
   | { status: "idle" }
@@ -138,18 +139,18 @@ function MetricCard({
         </Text>
         <MetricInfo label={hint} />
       </div>
-      <div className="flex items-end gap-1.5">
+      <div className="flex items-baseline gap-1.5">
         {unitFirst ? (
           <>
-            <Text size="base" color="tertiary" className="leading-7">
+            <Text size="base" color="tertiary" className="!leading-none">
               {unit}
             </Text>
-            <p className="text-2xl font-medium leading-9 text-fg tabular-nums">{value}</p>
+            <p className="text-2xl font-medium !leading-none text-fg tabular-nums">{value}</p>
           </>
         ) : (
           <>
-            <p className="text-2xl font-medium leading-9 text-fg tabular-nums">{value}</p>
-            <Text size="base" color="tertiary" className="leading-7">
+            <p className="text-2xl font-medium !leading-none text-fg tabular-nums">{value}</p>
+            <Text size="base" color="tertiary" className="!leading-none">
               {unit}
             </Text>
           </>
@@ -189,7 +190,7 @@ function ImpressionsChart({
           scrub
           fill
           badge
-          badgeTail
+          badgeTail={false}
           pulse
           momentum
           lineWidth={2}
@@ -208,25 +209,35 @@ export function HomeDashboard({
   period: periodProp,
   onPeriodChange,
   metrics,
-  videos = SAMPLE_VIDEOS,
-  channels,
+  videos: videosProp,
+  channels: channelsProp,
   metric,
   onMetricChange,
   nowSec: nowSecProp,
 }: HomeDashboardProps) {
+  const live = useLiveImpressions();
+  const liveMode = videosProp == null && nowSecProp == null;
+  const videos = videosProp ?? live.videos;
+  const channels = channelsProp ?? live.channels;
   const [periodUncontrolled, setPeriodUncontrolled] = useState<HomePeriod>("today");
   const [greeting, setGreeting] = useState(`Hello, ${greetingName}`);
   const nowSec = useChartNowSec(nowSecProp);
   const period = periodProp ?? periodUncontrolled;
   const windowSecs =
     IMPRESSION_WINDOWS.find((item) => item.id === period)?.secs ?? DEFAULT_IMPRESSION_WINDOW;
-  const impressionHistory = useMemo(
-    () => (nowSec == null ? null : buildImpressionHistory(videos, nowSec)),
-    [videos, nowSec],
+  const impressionHistory = useMemo(() => {
+    if (liveMode) return live.history;
+    return nowSec == null ? null : buildImpressionHistory(videos, nowSec);
+  }, [live.history, liveMode, nowSec, videos]);
+  const videoIdKey = videos.map((video) => video.id).join(",");
+  const videoIds = useMemo(
+    () => (videoIdKey.length > 0 ? videoIdKey.split(",") : []),
+    [videoIdKey],
   );
-  const videoIds = useMemo(() => videos.map((video) => video.id), [videos]);
   const stripeRevenue = useAttributedRevenue(videoIds);
-  const totalImpressions = metrics?.impressions ?? sumImpressions(videos);
+  const totalImpressions = metrics?.impressions ?? (liveMode ? live.totalImpressions : sumImpressions(videos));
+  const totalSignups =
+    metrics?.signups ?? videos.reduce((sum, video) => sum + (video.signups ?? 0), 0);
   const { amount: attributedRevenue, truncated: revenueTruncated } = attributedRevenueValue(
     metrics,
     stripeRevenue,
@@ -259,8 +270,10 @@ export function HomeDashboard({
               type="button"
               onClick={() => setPeriod(item.id)}
               className={cn(
-                "text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-brand-border-focus",
-                item.id === period ? "text-fg" : "text-fg-tertiary",
+                "text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-border-focus",
+                item.id === period
+                  ? "font-medium text-fg"
+                  : "font-normal text-fg-tertiary",
               )}
             >
               {item.label}
@@ -292,10 +305,10 @@ export function HomeDashboard({
                   unit="All posts"
                 />
                 <MetricCard
-                  label="Conversion rate"
-                  hint="Share of conversations that reached a successful outcome."
-                  value={String(metrics?.conversionRate ?? 0)}
-                  unit="%"
+                  label="Product signups"
+                  hint="Signups attributed to these videos and their channels."
+                  value={formatImpressionsCount(totalSignups)}
+                  unit="All posts"
                 />
                 <MetricCard
                   label="Revenue"

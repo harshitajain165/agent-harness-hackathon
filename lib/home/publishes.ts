@@ -14,7 +14,18 @@ export type PublishRow = {
   featured: boolean;
   status: PublishStatus;
   hue: number;
+  thumb: string;
 };
+
+const PUBLISH_THUMBS: Record<string, string> = {
+  linear: "/recommended/linear-thumb.png",
+  interfere: "/recommended/interfere-thumb.jpg",
+  welcome: "/home/onboard-agent.png",
+  voice: "/home/onboard-voice.png",
+  style: "/home/onboard-knowledge.png",
+};
+
+const FALLBACK_THUMB = "/recommended/linear-thumb.png";
 
 const POINT_COUNT = 16;
 
@@ -51,6 +62,7 @@ export function buildPublishRows(videos: HomeRankedItem[]): PublishRow[] {
       featured: index === 0,
       status: "live" as const,
       hue: (hashString(video.id) % 48) + 12,
+      thumb: PUBLISH_THUMBS[video.id] ?? FALLBACK_THUMB,
     };
   });
 }

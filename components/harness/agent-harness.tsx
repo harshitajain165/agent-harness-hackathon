@@ -12,6 +12,7 @@ import type {
   Artifact,
   ChatMessageInput,
   ThinkingStep,
+  ThinkingVariant,
   ToolCall,
   ToolResult,
 } from "@/lib/agent/types";
@@ -20,17 +21,21 @@ import { DiffTable } from "./diff-table";
 import { PromptBar } from "./prompt-bar";
 import { RecordsTable } from "./records-table";
 import { SidebarNav, type SidebarTab } from "./sidebar-nav";
-import { StreamingText, UserBubble } from "./streaming-text";
-import { ThinkingState } from "./thinking-state";
+import { toast } from "@/components/ui/toast";
+import { FollowUpList, StreamingText, UserBubble, VIDEO_FOLLOW_UPS, type FollowUp } from "./streaming-text";
+import { liveSearchFromTurn, ThinkingState } from "./thinking-state";
 import { ToolChips } from "./tool-chips";
 import { VideoCreating } from "./creation-orb";
 import { CatalogPage } from "./catalog-page";
 import { HomeDashboard } from "./home-dashboard";
 import { SuggestionRail } from "./suggestion-rail";
+import { ChannelPreviews } from "./channel-previews";
 import { VideoEditor } from "./video-editor";
 
 type AssistantBody = {
   thinkingLabel?: string;
+  thinkingVariant?: ThinkingVariant;
+  thinkingQuery?: string;
   thinkingSteps?: ThinkingStep[];
   thinking: boolean;
   text: string;
@@ -53,12 +58,56 @@ type Conversation = {
 };
 
 const PANE_KINDS = new Set<Artifact["kind"]>(["records", "video"]);
-const VIDEO_INTENT = /\b(video|footage|studio)\b/i;
+const VIDEO_INTENT = /\b(video|footage|studio|film)\b/i;
+const VIDEO_FOLLOW_UP_INTENT = /\b(slack|export|publish)\b/i;
+
+function wantsVideoCreate(text: string) {
+  return VIDEO_INTENT.test(text) && !VIDEO_FOLLOW_UP_INTENT.test(text);
+}
+
+function downloadVideo(src: string, title: string) {
+  const ext = src.match(/\.([a-z0-9]+)(?:\?|$)/i)?.[1] ?? "mp4";
+  const safe = title.replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "video";
+  const name = `${safe}.${ext}`;
+
+  const save = (href: string, revoke?: string) => {
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = name;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    if (revoke) window.setTimeout(() => URL.revokeObjectURL(revoke), 1500);
+  };
+
+  void fetch(src)
+    .then((response) => {
+      if (!response.ok) throw new Error("export failed");
+      return response.blob();
+    })
+    .then((blob) => {
+      const href = URL.createObjectURL(blob);
+      save(href, href);
+    })
+    .catch(() => {
+      save(src);
+    });
+}
+
+function precedingUserText(messages: ThreadMessage[], assistantIndex: number) {
+  for (let index = assistantIndex - 1; index >= 0; index--) {
+    const message = messages[index];
+    if (message.role === "user") return message.text;
+  }
+  return "";
+}
 
 function emptyAssistant(): AssistantBody {
   return {
     thinking: true,
-    thinkingLabel: "Thinking",
+    thinkingVariant: "search",
+    thinkingLabel: "Searching the web",
     text: "",
     streaming: true,
     tools: [],
@@ -74,6 +123,8 @@ function applyEvent(body: AssistantBody, event: AgentEvent): AssistantBody {
         thinking: true,
         thinkingLabel: event.data.label,
         thinkingSteps: event.data.steps,
+        thinkingVariant: event.data.variant ?? body.thinkingVariant,
+        thinkingQuery: event.data.query ?? body.thinkingQuery,
       };
     case "token":
       return {
@@ -110,29 +161,47 @@ function applyEvent(body: AssistantBody, event: AgentEvent): AssistantBody {
 
 function AssistantTurn({
   message,
+  prompt,
   creating,
+  busy,
   onResolve,
+  onFollowUp,
 }: {
   message: AssistantMsg;
+  prompt: string;
   creating?: boolean;
+  busy?: boolean;
   onResolve: (messageId: string, accepted: boolean, answers: Record<string, string | string[]>) => void;
+  onFollowUp: (item: FollowUp, video?: Extract<Artifact, { kind: "video" }>) => void;
 }) {
   const { body } = message;
   const records = body.artifacts.find((item): item is Extract<Artifact, { kind: "records" }> => item.kind === "records");
   const video = body.artifacts.find((item): item is Extract<Artifact, { kind: "video" }> => item.kind === "video");
   const diffs = body.artifacts.filter((item): item is Extract<Artifact, { kind: "diff" }> => item.kind === "diff");
+  const liveSearch = liveSearchFromTurn({
+    query: body.thinkingQuery ?? prompt,
+    steps: body.thinkingSteps,
+    tools: body.tools,
+  });
+  const searchPending = body.tools.some(
+    (tool) => /search|scrape|browse|web_search|fetch|crawl/i.test(tool.call.name) && !tool.result
+  );
+  const inFlight = body.thinking || body.streaming;
 
   return (
     <article className="flex min-w-0 flex-col gap-4">
-      {(body.thinking || (body.thinkingSteps && body.thinkingSteps.length > 0)) && (
-        <ThinkingState
-          label={body.thinkingLabel ?? "Thinking"}
-          steps={body.thinkingSteps}
-          working={body.thinking}
-        />
-      )}
+      <ThinkingState
+        variant={body.thinkingVariant ?? "search"}
+        query={liveSearch?.query ?? body.thinkingQuery ?? prompt}
+        rows={liveSearch?.rows}
+        steps={liveSearch ? undefined : body.thinkingSteps}
+        working={Boolean(liveSearch) && (body.thinking || searchPending)}
+        play={inFlight}
+      />
       {body.tools.length > 0 ? <ToolChips tools={body.tools} /> : null}
-      <StreamingText text={body.text} streaming={body.streaming} error={body.error} />
+      {body.text || body.error ? (
+        <StreamingText text={body.text} streaming={body.streaming} error={body.error} />
+      ) : null}
       {diffs.map((artifact) => (
         <DiffTable key={artifact.title} artifact={artifact} />
       ))}
@@ -158,6 +227,13 @@ function AssistantTurn({
           <VideoEditor artifact={video} />
         </div>
       ) : null}
+      {video && !body.streaming && !creating ? (
+        <FollowUpList
+          items={VIDEO_FOLLOW_UPS}
+          disabled={busy}
+          onFollowUp={(item) => onFollowUp(item, video)}
+        />
+      ) : null}
     </article>
   );
 }
@@ -168,11 +244,13 @@ export function AgentHarness() {
   ]);
   const [activeId, setActiveId] = useState("home");
   const [view, setView] = useState<"dashboard" | "publishes" | "channels" | "chat">("dashboard");
-  const [collapsed, setCollapsed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [closedPane, setClosedPane] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const composerRef = useRef<HTMLDivElement>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
+  const [composer, setComposer] = useState("");
+  const [focusComposer, setFocusComposer] = useState(false);
   const [composerH, setComposerH] = useState(88);
 
   const chat = chats.find((item) => item.id === activeId) ?? chats[0];
@@ -186,7 +264,7 @@ export function AgentHarness() {
     (item): item is Extract<Artifact, { kind: "video" }> => item.kind === "video"
   );
   const creatingVideo = Boolean(
-    lastAssistant?.body.streaming && !lastVideo && lastUser && VIDEO_INTENT.test(lastUser.text)
+    lastAssistant?.body.streaming && !lastVideo && lastUser && wantsVideoCreate(lastUser.text)
   );
   const paneArtifact = creatingVideo
     ? undefined
@@ -216,6 +294,7 @@ export function AgentHarness() {
   };
 
   const send = async (text: string) => {
+    setComposer("");
     const conversationId = chat.id;
     const userMsg: UserMsg = { id: crypto.randomUUID(), role: "user", text };
     const assistantMsg: AssistantMsg = {
@@ -320,6 +399,21 @@ export function AgentHarness() {
     }
   };
 
+  const handleVideoFollowUp = (item: FollowUp, video?: Extract<Artifact, { kind: "video" }>) => {
+    if (item.id === "export") {
+      if (video?.src) downloadVideo(video.src, video.title);
+      toast("Export started");
+      return;
+    }
+    if (item.prompt) void send(item.prompt);
+  };
+
+  const prefillPrompt = (text: string) => {
+    setView("chat");
+    setComposer(text);
+    setFocusComposer(true);
+  };
+
   const openChat = (id: string) => {
     setActiveId(id);
     setView("chat");
@@ -356,6 +450,20 @@ export function AgentHarness() {
     return () => observer.disconnect();
   }, [active, activeId]);
 
+  useEffect(() => {
+    if (!focusComposer) return;
+    const input = composerInputRef.current;
+    if (!input) return;
+    input.focus();
+    const match = composer.match(/\[[^\]]+\]/);
+    if (match && match.index != null) {
+      input.setSelectionRange(match.index, match.index + match[0].length);
+    } else {
+      input.setSelectionRange(composer.length, composer.length);
+    }
+    setFocusComposer(false);
+  }, [focusComposer, composer, view]);
+
   return (
     <main className="flex h-[100dvh] bg-neutral-100 text-fg">
       <SidebarNav
@@ -365,8 +473,6 @@ export function AgentHarness() {
         onTab={(tab: SidebarTab) => setView(tab === "home" ? "dashboard" : tab)}
         onNewChat={newChat}
         onPick={openChat}
-        collapsed={collapsed}
-        onToggle={() => setCollapsed((value) => !value)}
       />
 
       <div className="flex min-w-0 flex-1 gap-2.5 p-2.5">
@@ -415,15 +521,18 @@ export function AgentHarness() {
                   className="mx-auto flex w-full max-w-[720px] flex-col gap-8 px-4 pt-8 sm:px-8"
                   style={{ paddingBottom: composerH + 16 }}
                 >
-                  {chat.messages.map((message) =>
+                  {chat.messages.map((message, index) =>
                     message.role === "user" ? (
                       <UserBubble key={message.id} text={message.text} />
                     ) : (
                       <AssistantTurn
                         key={message.id}
                         message={message}
+                        prompt={precedingUserText(chat.messages, index)}
                         creating={creatingVideo && message.id === lastAssistant?.id}
+                        busy={busy}
                         onResolve={resolveApproval}
+                        onFollowUp={handleVideoFollowUp}
                       />
                     )
                   )}
@@ -438,7 +547,14 @@ export function AgentHarness() {
               />
               <div ref={composerRef} className="absolute inset-x-0 bottom-0 px-4 pb-5 sm:px-8">
                 <div className="mx-auto max-w-[720px]">
-                  <PromptBar placeholder="Reply" disabled={busy} onSend={send} />
+                  <PromptBar
+                    placeholder="Reply"
+                    disabled={busy}
+                    value={composer}
+                    onChange={setComposer}
+                    onSend={send}
+                    inputRef={composerInputRef}
+                  />
                 </div>
               </div>
             </div>
@@ -449,10 +565,18 @@ export function AgentHarness() {
                 <span className="block">Let's make a film</span>
               </h1>
               <div className="mt-7">
-                <PromptBar autoFocus placeholder="Ask anything" disabled={busy} onSend={send} />
+                <PromptBar
+                  autoFocus
+                  placeholder="Ask anything"
+                  disabled={busy}
+                  value={composer}
+                  onChange={setComposer}
+                  onSend={send}
+                  inputRef={composerInputRef}
+                />
               </div>
               <div className="mt-10">
-                <SuggestionRail onSelect={send} />
+                <SuggestionRail onPrefill={prefillPrompt} />
               </div>
             </div>
           )}
@@ -466,30 +590,37 @@ export function AgentHarness() {
               creatingVideo || paneArtifact?.kind === "video" ? "w-[min(520px,42vw)]" : "w-[360px]"
             }`}
           >
-            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border-default px-3">
-              <Text size="sm" weight="medium">
-                {creatingVideo ? "Creating video" : paneArtifact?.title}
-              </Text>
-              <IconButton
-                aria-label="Close pane"
-                variant="transparent"
-                size="sm"
-                onClick={() => setClosedPane(chat.id)}
-              >
-                <CloseIcon className="size-3.5" />
-              </IconButton>
-            </div>
-            <div
-              className={
-                creatingVideo || paneArtifact?.kind === "video"
-                  ? "min-h-0 flex-1"
-                  : "min-h-0 flex-1 overflow-y-auto p-3"
-              }
-            >
-              {creatingVideo ? <VideoCreating /> : null}
-              {paneArtifact?.kind === "records" ? <RecordsTable artifact={paneArtifact} /> : null}
-              {paneArtifact?.kind === "video" ? <VideoEditor artifact={paneArtifact} /> : null}
-            </div>
+            {paneArtifact?.kind === "video" ? (
+              <ChannelPreviews
+                artifact={paneArtifact}
+                prompt={lastUser?.text}
+                onClose={() => setClosedPane(chat.id)}
+              />
+            ) : (
+              <>
+                <div className="flex h-11 shrink-0 items-center justify-between border-b border-border-default px-3">
+                  <Text size="sm" weight="medium">
+                    {creatingVideo ? "Creating video" : paneArtifact?.title}
+                  </Text>
+                  <IconButton
+                    aria-label="Close pane"
+                    variant="transparent"
+                    size="sm"
+                    onClick={() => setClosedPane(chat.id)}
+                  >
+                    <CloseIcon className="size-3.5" />
+                  </IconButton>
+                </div>
+                <div
+                  className={
+                    creatingVideo ? "min-h-0 flex-1" : "min-h-0 flex-1 overflow-y-auto p-3"
+                  }
+                >
+                  {creatingVideo ? <VideoCreating /> : null}
+                  {paneArtifact?.kind === "records" ? <RecordsTable artifact={paneArtifact} /> : null}
+                </div>
+              </>
+            )}
           </aside>
         ) : null}
       </div>

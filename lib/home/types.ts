@@ -2,7 +2,7 @@ export type HomePeriod = "today" | "7d" | "30d" | "lifetime";
 
 export type HomeMetrics = {
   impressions: number;
-  conversionRate: number;
+  signups: number;
   attributedRevenue: number;
 };
 
@@ -19,6 +19,7 @@ export type HomeRankedItem = {
   label: string;
   impressions: number;
   revenue: number;
+  signups?: number;
   icon?: string;
 };
 
@@ -37,13 +38,13 @@ export type HomeDashboardProps = {
 
 export const EMPTY_HOME_METRICS: HomeMetrics = {
   impressions: 0,
-  conversionRate: 0,
+  signups: 0,
   attributedRevenue: 0,
 };
 
 export const HOME_PERIODS: { id: HomePeriod; label: string }[] = [
-  { id: "today", label: "today" },
+  { id: "today", label: "Today" },
   { id: "7d", label: "7d" },
   { id: "30d", label: "30d" },
-  { id: "lifetime", label: "lifetime" },
+  { id: "lifetime", label: "Lifetime" },
 ];

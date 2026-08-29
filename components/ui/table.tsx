@@ -301,6 +301,7 @@ function TablePane({
   body,
   footer,
   lines,
+  well,
   className,
   tableProps,
   paneRef,
@@ -315,6 +316,7 @@ function TablePane({
   body: ReactElement | null;
   footer: ReactElement | null;
   lines: TableLines;
+  well: boolean;
   className?: string;
   tableProps: ComponentProps<"table">;
   paneRef: RefObject<HTMLDivElement | null>;
@@ -328,13 +330,15 @@ function TablePane({
     <div
       data-slot="table-inner"
       className={cn(
-        "border-y border-neutral-200 bg-neutral-0",
-        isStart && "rounded-l-[16px] border-l",
-        isEnd && "rounded-r-[16px] border-r",
+        "bg-neutral-0",
+        well && "border-y border-neutral-200",
+        well && isStart && "rounded-l-[16px] border-l",
+        well && isEnd && "rounded-r-[16px] border-r",
         isMiddle && "overflow-hidden",
-        isMiddle && !hasStart && "border-l",
-        isMiddle && !hasEnd && "border-r",
-        isMiddle && !hasStart && !hasEnd && innerRadiusClass
+        well && isMiddle && !hasStart && "border-l",
+        well && isMiddle && !hasEnd && "border-r",
+        well && isMiddle && !hasStart && !hasEnd && innerRadiusClass,
+        !well && "border-t border-neutral-200"
       )}
     >
       <table
@@ -344,9 +348,11 @@ function TablePane({
           lines,
           cn(
             className,
-            isStart &&
+            well &&
+              isStart &&
               "[&_tbody_tr:first-child>td]:rounded-tl-[16px] [&_tbody_tr:last-child>td]:rounded-bl-[16px]",
-            isEnd &&
+            well &&
+              isEnd &&
               "[&_tbody_tr:first-child>td]:rounded-tr-[16px] [&_tbody_tr:last-child>td]:rounded-br-[16px]"
           )
         )}
@@ -367,13 +373,17 @@ function TablePane({
     </table>
   ) : null;
 
+  const stackClass = well ? "flex-col gap-1" : "flex-col";
+
   return (
     <div
       ref={paneRef}
       data-slot={`table-pane-${lane}`}
       className={cn(
-        "relative flex flex-col gap-1",
-        isMiddle ? "min-w-0 flex-1" : "z-10 shrink-0 bg-neutral-100"
+        "relative flex",
+        stackClass,
+        isMiddle ? "min-w-0 flex-1" : "z-10 shrink-0",
+        well && !isMiddle && "bg-neutral-100"
       )}
     >
       {isMiddle ? (
@@ -384,12 +394,12 @@ function TablePane({
           data-overflow-end={overflowEnd ? "true" : undefined}
           className={cn(
             "min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-            !hasStart && !hasEnd && innerRadiusClass,
-            hasStart && !hasEnd && "rounded-r-[16px]",
-            !hasStart && hasEnd && "rounded-l-[16px]"
+            well && !hasStart && !hasEnd && innerRadiusClass,
+            well && hasStart && !hasEnd && "rounded-r-[16px]",
+            well && !hasStart && hasEnd && "rounded-l-[16px]"
           )}
         >
-          <div className="flex w-max min-w-full flex-col gap-1">
+          <div className={cn("flex w-max min-w-full", stackClass)}>
             {headerTable}
             {bodyShell}
           </div>
@@ -413,10 +423,12 @@ function TablePane({
 function Table({
   className,
   lines = "none",
+  well = true,
   children,
   ...props
 }: ComponentProps<"table"> & {
   lines?: TableLines;
+  well?: boolean;
 }) {
   const startPaneRef = useRef<HTMLDivElement>(null);
   const middlePaneRef = useRef<HTMLDivElement>(null);
@@ -443,65 +455,80 @@ function Table({
   usePaneMetrics(startPaneRef, middlePaneRef, endPaneRef);
   usePassVerticalWheel(scrollRef);
 
-  return (
-    <Frame
-      data-slot="table-well"
-      variant="default"
-      className="group/table-scroll"
-      data-overflow-start={overflowStart ? "true" : undefined}
-      data-overflow-end={overflowEnd ? "true" : undefined}
-    >
-      <div className="flex min-w-0 items-stretch">
-        {hasStart ? (
-          <TablePane
-            lane="start"
-            hasStart={hasStart}
-            hasEnd={hasEnd}
-            overflowStart={overflowStart}
-            overflowEnd={overflowEnd}
-            header={startHeader}
-            body={startBody}
-            footer={startFooter}
-            lines={lines}
-            className={className}
-            tableProps={props}
-            paneRef={startPaneRef}
-          />
-        ) : null}
-        {hasMiddle ? (
-          <TablePane
-            lane="middle"
-            hasStart={hasStart}
-            hasEnd={hasEnd}
-            overflowStart={overflowStart}
-            overflowEnd={overflowEnd}
-            header={middleHeader}
-            body={middleBody}
-            footer={middleFooter}
-            lines={lines}
-            className={className}
-            tableProps={props}
-            paneRef={middlePaneRef}
-            scrollRef={scrollRef}
-          />
-        ) : null}
-        {hasEnd ? (
-          <TablePane
-            lane="end"
-            hasStart={hasStart}
-            hasEnd={hasEnd}
-            overflowStart={overflowStart}
-            overflowEnd={overflowEnd}
-            header={endHeader}
-            body={endBody}
-            footer={endFooter}
-            lines={lines}
-            className={className}
-            tableProps={props}
-            paneRef={endPaneRef}
-          />
-        ) : null}
+  const panes = (
+    <div className="flex min-w-0 items-stretch">
+      {hasStart ? (
+        <TablePane
+          lane="start"
+          hasStart={hasStart}
+          hasEnd={hasEnd}
+          overflowStart={overflowStart}
+          overflowEnd={overflowEnd}
+          header={startHeader}
+          body={startBody}
+          footer={startFooter}
+          lines={lines}
+          well={well}
+          className={className}
+          tableProps={props}
+          paneRef={startPaneRef}
+        />
+      ) : null}
+      {hasMiddle ? (
+        <TablePane
+          lane="middle"
+          hasStart={hasStart}
+          hasEnd={hasEnd}
+          overflowStart={overflowStart}
+          overflowEnd={overflowEnd}
+          header={middleHeader}
+          body={middleBody}
+          footer={middleFooter}
+          lines={lines}
+          well={well}
+          className={className}
+          tableProps={props}
+          paneRef={middlePaneRef}
+          scrollRef={scrollRef}
+        />
+      ) : null}
+      {hasEnd ? (
+        <TablePane
+          lane="end"
+          hasStart={hasStart}
+          hasEnd={hasEnd}
+          overflowStart={overflowStart}
+          overflowEnd={overflowEnd}
+          header={endHeader}
+          body={endBody}
+          footer={endFooter}
+          lines={lines}
+          well={well}
+          className={className}
+          tableProps={props}
+          paneRef={endPaneRef}
+        />
+      ) : null}
+    </div>
+  );
+
+  const wellProps = {
+    className: "group/table-scroll",
+    "data-overflow-start": overflowStart ? "true" : undefined,
+    "data-overflow-end": overflowEnd ? "true" : undefined,
+  } as const;
+
+  if (!well) {
+    return (
+      <div data-slot="table-flush" {...wellProps}>
+        {panes}
       </div>
+    );
+  }
+
+  return (
+    <Frame data-slot="table-well" variant="default" {...wellProps}>
+      {panes}
     </Frame>
   );
 }

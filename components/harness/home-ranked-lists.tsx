@@ -24,11 +24,11 @@ const METRICS: { id: HomeMetricKind; label: string }[] = [
 ];
 
 export const SAMPLE_VIDEOS: HomeRankedItem[] = [
-  { id: "linear", label: "Linear product walkthrough", impressions: 32400, revenue: 4280 },
-  { id: "interfere", label: "Interfere launch film", impressions: 18100, revenue: 1960 },
-  { id: "welcome", label: "Welcome to Smallest", impressions: 9400, revenue: 740 },
-  { id: "voice", label: "Pick a voice", impressions: 3100, revenue: 180 },
-  { id: "style", label: "Upload your own style", impressions: 860, revenue: 40 },
+  { id: "linear", label: "Linear product walkthrough", impressions: 32400, revenue: 4280, signups: 680 },
+  { id: "interfere", label: "Interfere launch film", impressions: 18100, revenue: 1960, signups: 326 },
+  { id: "welcome", label: "Welcome to Smallest", impressions: 9400, revenue: 740, signups: 151 },
+  { id: "voice", label: "Pick a voice", impressions: 3100, revenue: 180, signups: 62 },
+  { id: "style", label: "Upload your own style", impressions: 860, revenue: 40, signups: 21 },
 ];
 
 export const SAMPLE_CHANNELS: HomeRankedItem[] = [
@@ -37,6 +37,7 @@ export const SAMPLE_CHANNELS: HomeRankedItem[] = [
     label: "YouTube",
     impressions: 28600,
     revenue: 3120,
+    signups: 572,
     icon: "/home/channels/youtube.svg",
   },
   {
@@ -44,17 +45,19 @@ export const SAMPLE_CHANNELS: HomeRankedItem[] = [
     label: "LinkedIn",
     impressions: 12400,
     revenue: 1680,
+    signups: 223,
     icon: "/home/channels/linkedin.png",
   },
-  { id: "x", label: "X", impressions: 8700, revenue: 920, icon: "/home/channels/x.png" },
+  { id: "x", label: "X", impressions: 8700, revenue: 920, signups: 131, icon: "/home/channels/x.png" },
   {
     id: "instagram",
     label: "Instagram",
     impressions: 4200,
     revenue: 310,
+    signups: 92,
     icon: "/home/channels/instagram.png",
   },
-  { id: "tiktok", label: "TikTok", impressions: 1900, revenue: 90, icon: "/home/channels/tiktok.png" },
+  { id: "tiktok", label: "TikTok", impressions: 1900, revenue: 90, signups: 30, icon: "/home/channels/tiktok.png" },
 ];
 
 function formatMetric(value: number, kind: HomeMetricKind) {
@@ -169,7 +172,7 @@ export function RankedColumn({
           </EmptyStateDescription>
         </EmptyState>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-2">
           {ranked.map((item) => {
             const value = item[metric];
             const width = max <= 0 ? 0 : Math.max(12, (value / max) * 100);

@@ -1,17 +1,9 @@
 "use client";
 
-import { BrandMark } from "@/components/brand-mark";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  HistoryIcon,
-  GlobeIcon,
-  HomeIcon,
-  PlayIcon,
-  PlusIcon,
-} from "@/components/icons";
+import { useEffect, useRef, useState } from "react";
+import { GlobeIcon, HomeIcon, PlayIcon, PlusIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
+import { Kbd } from "@/components/ui/kbd";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
@@ -29,6 +21,28 @@ const TABS: { id: SidebarTab; label: string; icon: typeof HomeIcon }[] = [
   { id: "channels", label: "Channels", icon: GlobeIcon },
 ];
 
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    target.isContentEditable
+  );
+}
+
+function useModKey() {
+  const [modKey, setModKey] = useState("⌘");
+  useEffect(() => {
+    const apple =
+      /Mac|iPhone|iPad|iPod/.test(navigator.platform) ||
+      /Mac OS X/.test(navigator.userAgent);
+    setModKey(apple ? "⌘" : "⌃");
+  }, []);
+  return modKey;
+}
+
 export function SidebarNav({
   chats,
   activeId,
@@ -36,8 +50,6 @@ export function SidebarNav({
   onTab,
   onNewChat,
   onPick,
-  collapsed,
-  onToggle,
 }: {
   chats: SidebarChat[];
   activeId: string;
@@ -45,35 +57,29 @@ export function SidebarNav({
   onTab?: (tab: SidebarTab) => void;
   onNewChat: () => void;
   onPick: (id: string) => void;
-  collapsed: boolean;
-  onToggle: () => void;
 }) {
+  const onNewChatRef = useRef(onNewChat);
+  onNewChatRef.current = onNewChat;
+  const modKey = useModKey();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "KeyN" || !(event.metaKey || event.ctrlKey)) return;
+      if (event.altKey || event.shiftKey) return;
+      if (isTypingTarget(event.target)) return;
+      event.preventDefault();
+      onNewChatRef.current();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
-    <aside
-      className={cn(
-        "hidden h-full shrink-0 flex-col py-2 pl-2 lg:flex",
-        collapsed ? "w-[68px]" : "w-[240px]"
-      )}
-    >
-      <div className="flex items-center gap-2 px-2 py-1.5">
-        <BrandMark size={18} />
-        {!collapsed ? (
-          <Text size="sm" weight="medium" className="min-w-0 flex-1 truncate">
-            Agent
-          </Text>
-        ) : null}
-        <IconButton
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          variant="transparent"
-          size="sm"
-          onClick={onToggle}
-        >
-          {collapsed ? (
-            <ChevronRightIcon className="size-4" />
-          ) : (
-            <ChevronLeftIcon className="size-4" />
-          )}
-        </IconButton>
+    <aside className="hidden h-full w-[240px] shrink-0 flex-col py-2 pl-2 lg:flex">
+      <div className="flex items-center px-2 py-1.5">
+        <Text size="sm" weight="medium" className="min-w-0 truncate">
+          Nolan
+        </Text>
       </div>
 
       <div className="mt-2 flex flex-col gap-1 px-1">
@@ -90,39 +96,37 @@ export function SidebarNav({
               className={cn(
                 "flex items-center gap-2 rounded-[10px] px-2 py-2 text-left text-sm transition-colors duration-150",
                 active
-                  ? "bg-neutral-100 text-fg"
-                  : "text-fg-secondary hover:bg-neutral-100 hover:text-fg",
-                collapsed && "justify-center px-0"
+                  ? "bg-neutral-0 text-fg"
+                  : "text-fg-tertiary hover:bg-neutral-0 hover:text-fg"
               )}
             >
               <Icon className="size-4" />
-              {!collapsed ? tab.label : null}
+              {tab.label}
             </button>
           );
         })}
         <Button
-          variant="secondary"
+          variant="transparent"
           size="sm"
-          className={cn("justify-start", collapsed && "px-0")}
+          className="w-full justify-start bg-transparent text-fg-tertiary shadow-none hover:bg-neutral-0 hover:text-fg data-pressed:bg-neutral-0"
+          aria-keyshortcuts="Meta+N Control+N"
           onClick={onNewChat}
         >
           <PlusIcon className="size-4" />
-          {!collapsed ? "New chat" : null}
+          New chat
+          <span className="ml-auto inline-flex items-center gap-0.5" aria-hidden>
+            <Kbd>{modKey}</Kbd>
+            <Kbd>N</Kbd>
+          </span>
         </Button>
       </div>
 
       <div aria-hidden className="mx-1 mt-3 mb-2 h-px bg-neutral-150" />
 
       <ScrollArea className="min-h-0 flex-1 px-1" scrollFade>
-        {!collapsed ? (
-          <Text size="sm" color="tertiary" className="px-2 py-1">
-            Recents
-          </Text>
-        ) : (
-          <div className="flex justify-center py-1">
-            <HistoryIcon className="size-4 text-fg-tertiary" />
-          </div>
-        )}
+        <Text size="sm" color="tertiary" className="px-2 py-1">
+          Recents
+        </Text>
         <nav className="flex flex-col gap-0.5">
           {chats.map((chat) => {
             const title = chat.title ?? "New chat";
@@ -137,11 +141,10 @@ export function SidebarNav({
                   "truncate rounded-[10px] px-2 py-2 text-left text-sm transition-colors duration-150",
                   active
                     ? "bg-neutral-100 text-fg"
-                    : "text-fg-secondary hover:bg-neutral-100 hover:text-fg",
-                  collapsed && "px-0 text-center"
+                    : "text-fg-secondary hover:bg-neutral-100 hover:text-fg"
                 )}
               >
-                {collapsed ? title.slice(0, 1).toUpperCase() : title}
+                {title}
               </button>
             );
           })}
