@@ -2,11 +2,15 @@
   "name": "smallest-design",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "playwright install chromium",
     "harness": "npx @truefoundry/trueforge@0.1.4",
     "setup:agent": "tsx harness/create-agent.ts"
   },

@@ -4,6 +4,12 @@ Chat UI for your agent. Tokens and components are defined in `app/globals.css` a
 
 ## Run
 
+Requires **Node ≥ 22** (`@truefoundry/trueforge-sdk` declares this in its own `engines` field —
+the TrueForge mode below won't run correctly on older Node, even though the plain UI/mock mode
+would). `pnpm install` also runs `playwright install chromium` via `postinstall`, needed for
+`record_demo`'s real recording — safe to skip if you only use the mock/proxy backends, but it
+runs by default.
+
 ```bash
 pnpm install
 pnpm dev
@@ -51,6 +57,11 @@ Set `DEMO_APP_URL` and have that app running (defaults to `http://localhost:3100
 screen-recording permission or ffmpeg system dependency needed (Playwright's own `recordVideo`,
 no cursor). The interaction script is currently hardcoded, not agent-authored — a documented
 simplification, see the comment in `lib/tools/record-demo.ts`.
+
+`app/api/mcp/route.ts` is unauthenticated by default (frictionless for local dev), but it launches
+a real browser and writes real files on every `record_demo` call. Set `MCP_SECRET` to require a
+matching `x-mcp-secret` header — `pnpm setup:agent` picks it up automatically and registers it on
+the MCP server manifest so TrueForge sends it on every call.
 
 ### Generic proxy / local mock
 

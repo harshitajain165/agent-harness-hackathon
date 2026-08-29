@@ -18,6 +18,10 @@ type ConversationState = {
 };
 
 const conversations = new Map<string, ConversationState>();
+// Dedupes concurrent first-turns for the same conversation — without this, two overlapping
+// calls could each see no existing session, each create one, and only the last write wins,
+// splitting the conversation across two TrueForge sessions.
+const pendingSessionCreates = new Map<string, Promise<string>>();
 
 export function getConversation(conversationId: string): ConversationState | undefined {
   return conversations.get(conversationId);
@@ -38,6 +42,30 @@ export function setSession(conversationId: string, sessionId: string): Conversat
   return state;
 }
 
+/**
+ * Returns the conversation's session id, creating one via `create()` if none exists yet.
+ * Concurrent callers for the same conversationId share the same in-flight creation instead
+ * of racing to create separate sessions.
+ */
+export async function getOrCreateSession(
+  conversationId: string,
+  create: () => Promise<string>
+): Promise<string> {
+  const existing = getConversation(conversationId);
+  if (existing) return existing.sessionId;
+
+  let creating = pendingSessionCreates.get(conversationId);
+  if (!creating) {
+    creating = create();
+    pendingSessionCreates.set(conversationId, creating);
+    creating.finally(() => pendingSessionCreates.delete(conversationId));
+  }
+
+  const sessionId = await creating;
+  setSession(conversationId, sessionId);
+  return sessionId;
+}
+
 export function rememberToolCall(conversationId: string, toolCallId: string, name: string, args: string) {
   getConversation(conversationId)?.toolCalls.set(toolCallId, { name, args });
 }
@@ -46,9 +74,10 @@ export function rememberPendingApproval(conversationId: string, toolCallId: stri
   getConversation(conversationId)?.pendingApprovals.set(toolCallId, threadId);
 }
 
-export function takePendingApproval(conversationId: string, toolCallId: string): string | undefined {
-  const state = getConversation(conversationId);
-  const threadId = state?.pendingApprovals.get(toolCallId);
-  state?.pendingApprovals.delete(toolCallId);
-  return threadId;
+export function getPendingApproval(conversationId: string, toolCallId: string): string | undefined {
+  return getConversation(conversationId)?.pendingApprovals.get(toolCallId);
+}
+
+export function clearPendingApproval(conversationId: string, toolCallId: string) {
+  getConversation(conversationId)?.pendingApprovals.delete(toolCallId);
 }

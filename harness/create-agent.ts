@@ -1,7 +1,5 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { TrueForge } from "@truefoundry/trueforge-sdk";
-import { AGENT_NAME, MCP_SERVER_NAME, agentSpec } from "./agent-spec";
 
 // Standalone script (run via `tsx`, outside Next.js) — Next.js auto-loads .env.local,
 // this doesn't, so load it by hand. Best-effort: fine if neither file exists.
@@ -30,8 +28,16 @@ loadDotEnv(join(process.cwd(), ".env.local"));
 loadDotEnv(join(process.cwd(), ".env"));
 
 async function main() {
+  // Dynamic import, deliberately after loadDotEnv above: a static import would be hoisted
+  // and evaluated before this file's own top-level statements run, so agent-spec.ts's
+  // process.env reads (TRUEFORGE_AGENT_NAME, TRUEFORGE_MODEL) would see an empty
+  // environment and silently fall back to defaults regardless of .env.local.
+  const { AGENT_NAME, MCP_SERVER_NAME, agentSpec } = await import("./agent-spec");
+  const { TrueForge } = await import("@truefoundry/trueforge-sdk");
+
   const baseUrl = process.env.TRUEFORGE_BASE_URL ?? "http://localhost:8790";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const mcpSecret = process.env.MCP_SECRET;
   const client = new TrueForge({ baseUrl });
 
   const mcpUrl = `${appUrl}/api/mcp`;
@@ -42,6 +48,9 @@ async function main() {
       type: "remote",
       url: mcpUrl,
       description: "Nolan's own tools (Phase 1: record_demo, publish_post).",
+      // Only set when MCP_SECRET is configured — see app/api/mcp/route.ts. Without it,
+      // the endpoint stays open, which is the current default for frictionless local dev.
+      ...(mcpSecret ? { auth: { type: "header", headers: { "x-mcp-secret": mcpSecret } } } : {}),
     },
   });
 

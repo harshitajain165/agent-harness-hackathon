@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
@@ -27,12 +28,19 @@ function buildServer() {
       inputSchema: { feature: z.string().describe("The feature being demonstrated") },
     },
     async ({ feature }) => {
-      const recording = await recordDemo(feature);
-      // JSON in the text content, not a separate content part — TrueForge's own
-      // ToolResponseEvent flattens whatever we return to a single `content: string`
-      // by the time it reaches our BFF, so this is the only channel available for
-      // structured data. map-event.ts parses this specifically for record_demo.
-      return { content: [{ type: "text", text: JSON.stringify({ feature, ...recording }) }] };
+      try {
+        const recording = await recordDemo(feature);
+        // JSON in the text content, not a separate content part — TrueForge's own
+        // ToolResponseEvent flattens whatever we return to a single `content: string`
+        // by the time it reaches our BFF, so this is the only channel available for
+        // structured data. map-event.ts parses this specifically for record_demo.
+        return { content: [{ type: "text", text: JSON.stringify({ feature, ...recording }) }] };
+      } catch (error) {
+        // e.g. the target app (DEMO_APP_URL) isn't running, or Chromium isn't installed —
+        // surface it as a real tool error instead of a raw 500 crashing the turn.
+        const message = error instanceof Error ? error.message : "Recording failed";
+        return { content: [{ type: "text", text: `record_demo failed: ${message}` }], isError: true };
+      }
     }
   );
 
@@ -54,10 +62,32 @@ function buildServer() {
   return server;
 }
 
+function secretsEqual(left: string, right: string) {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+// Unauthenticated by default (matches this route's frictionless local-dev posture), but
+// record_demo launches a real browser and writes real files — set MCP_SECRET to require
+// the same header create-agent.ts registers on the MCP server manifest (see harness/create-agent.ts).
+function authorizeMcp(request: Request): Response | null {
+  const secret = process.env.MCP_SECRET;
+  if (!secret) return null;
+  const header = request.headers.get("x-mcp-secret") ?? "";
+  if (!secretsEqual(header, secret)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
+
 // Stateless mode (sessionIdGenerator: undefined) — a transport instance handles exactly
 // one request, so build a fresh server+transport per call. We don't need MCP session
 // tracking for Phase 1 (no per-client state in our tools beyond the shared outbox above).
 async function handle(request: Request) {
+  const denied = authorizeMcp(request);
+  if (denied) return denied;
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await buildServer().connect(transport);
   return transport.handleRequest(request);
