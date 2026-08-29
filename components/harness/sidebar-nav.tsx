@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   HistoryIcon,
+  GlobeIcon,
+  HomeIcon,
+  PlayIcon,
   PlusIcon,
-  SearchIcon,
 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
@@ -21,9 +21,19 @@ export type SidebarChat = {
   title: string | null;
 };
 
+export type SidebarTab = "home" | "publishes" | "channels";
+
+const TABS: { id: SidebarTab; label: string; icon: typeof HomeIcon }[] = [
+  { id: "home", label: "Home", icon: HomeIcon },
+  { id: "publishes", label: "Publishes", icon: PlayIcon },
+  { id: "channels", label: "Channels", icon: GlobeIcon },
+];
+
 export function SidebarNav({
   chats,
   activeId,
+  activeTab = null,
+  onTab,
   onNewChat,
   onPick,
   collapsed,
@@ -31,17 +41,13 @@ export function SidebarNav({
 }: {
   chats: SidebarChat[];
   activeId: string;
+  activeTab?: SidebarTab | null;
+  onTab?: (tab: SidebarTab) => void;
   onNewChat: () => void;
   onPick: (id: string) => void;
   collapsed: boolean;
   onToggle: () => void;
 }) {
-  const [query, setQuery] = useState("");
-  const recents = chats.filter((chat) => {
-    if (!query.trim()) return true;
-    return (chat.title ?? "New chat").toLowerCase().includes(query.toLowerCase());
-  });
-
   return (
     <aside
       className={cn(
@@ -71,6 +77,29 @@ export function SidebarNav({
       </div>
 
       <div className="mt-2 flex flex-col gap-1 px-1">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              aria-current={active ? "page" : undefined}
+              title={tab.label}
+              onClick={() => onTab?.(tab.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-[10px] px-2 py-2 text-left text-sm transition-colors duration-150",
+                active
+                  ? "bg-neutral-100 text-fg"
+                  : "text-fg-secondary hover:bg-neutral-100 hover:text-fg",
+                collapsed && "justify-center px-0"
+              )}
+            >
+              <Icon className="size-4" />
+              {!collapsed ? tab.label : null}
+            </button>
+          );
+        })}
         <Button
           variant="secondary"
           size="sm"
@@ -80,24 +109,11 @@ export function SidebarNav({
           <PlusIcon className="size-4" />
           {!collapsed ? "New chat" : null}
         </Button>
-        {!collapsed ? (
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-fg-tertiary" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search chats"
-              className="pl-8"
-            />
-          </div>
-        ) : (
-          <IconButton aria-label="Search chats" variant="transparent" size="sm">
-            <SearchIcon className="size-4" />
-          </IconButton>
-        )}
       </div>
 
-      <ScrollArea className="mt-3 min-h-0 flex-1 px-1" scrollFade>
+      <div aria-hidden className="mx-1 mt-3 mb-2 h-px bg-neutral-150" />
+
+      <ScrollArea className="min-h-0 flex-1 px-1" scrollFade>
         {!collapsed ? (
           <Text size="sm" color="tertiary" className="px-2 py-1">
             Recents
@@ -108,7 +124,7 @@ export function SidebarNav({
           </div>
         )}
         <nav className="flex flex-col gap-0.5">
-          {recents.map((chat) => {
+          {chats.map((chat) => {
             const title = chat.title ?? "New chat";
             const active = chat.id === activeId;
             return (
