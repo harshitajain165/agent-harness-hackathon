@@ -95,8 +95,21 @@ test('a real LinkedIn payload normalises to the UI contract', () => {
   assert.ok(p.metrics.words > 0);
   assert.equal(p.metrics.hashtagCount, p.hashtags.length);
 
-  // The point of normalising: the UI and the agent see a fraction of the raw noise.
-  const before = JSON.stringify(raw).length;
-  const after = JSON.stringify(p).length;
-  assert.ok(after < before / 5, `expected a big reduction, got ${before} -> ${after}`);
+  // The point of normalising is dropping the noise, so assert that directly rather
+  // than via a byte count — the committed fixture is pre-trimmed for privacy, which
+  // would make any size-reduction claim measure the trimming, not the normaliser.
+  const NOISE = [
+    'top_visible_comments', 'more_relevant_posts', 'post_text_html',
+    'original_post_text', 'user_posts', 'user_articles', 'tagged_companies',
+  ];
+  const emitted = JSON.stringify(p);
+  for (const field of NOISE) {
+    assert.ok(!emitted.includes(field), `normalised output must not carry ${field}`);
+  }
+
+  // And that the output is exactly the contract's shape — no stray passthrough.
+  assert.deepEqual(
+    Object.keys(p).sort(),
+    ['author', 'engagement', 'hashtags', 'hook', 'id', 'media', 'metrics', 'platform', 'postedAt', 'text', 'url'],
+  );
 });

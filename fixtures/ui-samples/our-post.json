@@ -1,0 +1,39 @@
+{
+  "id": "7294573484813225984",
+  "platform": "linkedin",
+  "url": "https://www.linkedin.com/posts/sudarshankamath_whats-going-live-on-smallestai-this-week-activity-7294573484813225984-45Wl",
+  "author": {
+    "name": "Sudarshan Kamath",
+    "handle": "sudarshankamath",
+    "avatarUrl": "https://media.licdn.com/dms/image/v2/D4E03AQHento2BmIiuQ/profile-displayphoto-scale_400_400/B4EZ9MAOhjIwAg-/0/1783686556527?e=2147483647&v=beta&t=RhAPTl-sIhWlnik0QEkTVoubGOhCYelocqv_1vl3uV8",
+    "followers": 74071
+  },
+  "postedAt": "2025-02-10T04:30:45.361Z",
+  "text": "What's going live on smallest.ai this week:\n\n1. Professional Voice Cloning - will be generally available\n\n2. Pricing Console for Atoms - Voice Agents will not be free anymore, right Manav Lakhadive?\n\n3. Documentation for Atoms - up until now, it was anyone's guess how to use it\n\n4. Product Demo Videos - For all the lazy ones who do not want to read the documentation \n\nWhat should we build next?",
+  "hook": "What's going live on smallest.ai this week:",
+  "hashtags": [
+    "#Web3",
+    "#WindsurfAI",
+    "#JetBrains",
+    "#VSCode",
+    "#MicrosoftStrategy",
+    "#SystemDesign",
+    "#Scalability",
+    "#ElasticSearch",
+    "#SoftwareEngineering",
+    "#LowLatency"
+  ],
+  "media": [],
+  "engagement": {
+    "likes": 208,
+    "comments": 5,
+    "total": 213
+  },
+  "metrics": {
+    "words": 71,
+    "hookLength": 43,
+    "hasMedia": false,
+    "hashtagCount": 10,
+    "engagementRate": 2.88
+  }
+}
