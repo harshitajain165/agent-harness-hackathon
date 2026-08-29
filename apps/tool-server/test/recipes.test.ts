@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadRecipe } from '../src/recipes/load.ts';
 import { extractWithRecipe, parseNumber } from '../src/recipes/extract.ts';
-import { normalizeLinkedInPost } from '../src/recipes/normalize.ts';
+import { normalizeLinkedInPost, normalizeXPost } from '../src/recipes/normalize.ts';
 
 const recipe = loadRecipe('competitor-blog');
 const v1 = readFileSync('fixtures/competitor-blog.v1.html', 'utf8');
@@ -112,4 +112,30 @@ test('a real LinkedIn payload normalises to the UI contract', () => {
     Object.keys(p).sort(),
     ['author', 'engagement', 'hashtags', 'hook', 'id', 'media', 'metrics', 'platform', 'postedAt', 'text', 'url'],
   );
+});
+
+test('the real X payload normalises, including its quirks', () => {
+  const raw = JSON.parse(readFileSync('fixtures/brightdata/our-x-post.raw.json', 'utf8'));
+  const p = normalizeXPost(raw);
+
+  assert.equal(p.platform, 'x');
+  assert.equal(p.author.handle, 'smallest_AI');
+  assert.equal(p.hook, 'Voice Agents can now join meetings.');
+
+  // `videos` arrives as objects, not strings — a naive string filter drops them
+  // and the post looks text-only, which would invert the headline insight.
+  assert.equal(p.media.length, 1, 'the attached video must survive normalisation');
+  assert.ok(p.media[0].startsWith('https://'), 'media entries are URLs, not objects');
+  assert.equal(p.metrics.hasMedia, true);
+
+  // X gives impressions; LinkedIn does not. viewRate only exists when views do.
+  assert.equal(p.engagement.views, 1164);
+  assert.ok(p.metrics.viewRate && p.metrics.viewRate > 0);
+  assert.equal(p.engagement.total, p.engagement.likes + p.engagement.comments + (p.engagement.reposts ?? 0));
+});
+
+test('hashtags are recovered from X body text, which has no hashtags field', () => {
+  const p = normalizeXPost({ description: 'shipping #voiceai agents #realtime today', likes: 1 });
+  assert.deepEqual(p.hashtags, ['#voiceai', '#realtime']);
+  assert.equal(p.metrics.hashtagCount, 2);
 });

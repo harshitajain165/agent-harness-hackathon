@@ -24,6 +24,9 @@ export interface Engagement {
   likes: number;
   comments: number;
   reposts?: number;
+  /** X reports impressions; LinkedIn does not expose them publicly. */
+  views?: number;
+  bookmarks?: number;
   /** Single number for sorting and headline display. */
   total: number;
 }
@@ -37,6 +40,8 @@ export interface PostMetrics {
   hashtagCount: number;
   /** Engagement per 1,000 followers. Comparable across accounts of different sizes. */
   engagementRate?: number;
+  /** Engagement as a share of impressions. Only X gives us the denominator. */
+  viewRate?: number;
 }
 
 export interface Post {

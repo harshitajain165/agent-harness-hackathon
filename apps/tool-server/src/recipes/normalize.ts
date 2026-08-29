@@ -54,20 +54,28 @@ export function normalizeLinkedInPost(raw: Record<string, unknown>): Post {
 
 export function normalizeXPost(raw: Record<string, unknown>): Post {
   const text = str(raw.description) || str(raw.text);
-  const hashtags = arr(raw.hashtags);
-  const media = [...arr(raw.photos), ...arr(raw.videos)];
+  // X returns no hashtags field — they only exist inline in the body.
+  const hashtags = Array.from(text.matchAll(/#(\w+)/g)).map((m) => `#${m[1]}`);
+  // `videos` is a list of objects ({ video_url, ... }), not plain strings.
+  const videos = Array.isArray(raw.videos)
+    ? (raw.videos as Record<string, unknown>[]).map((v) => str(v?.video_url)).filter(Boolean)
+    : [];
+  const media = [...arr(raw.photos), ...videos];
+
   const likes = num(raw.likes);
   const comments = num(raw.replies);
   const reposts = num(raw.reposts);
-  const engagement = { likes, comments, reposts, total: likes + comments + reposts };
+  const views = num(raw.views) || undefined;
+  const bookmarks = num(raw.bookmarks) || undefined;
+  const engagement = { likes, comments, reposts, views, bookmarks, total: likes + comments + reposts };
   const followers = num(raw.followers) || undefined;
 
-  return {
+  const post: Post = {
     id: str(raw.id),
     platform: 'x',
     url: str(raw.url),
     author: {
-      name: str(raw.user_posted) || str(raw.name),
+      name: str(raw.name) || str(raw.user_posted),
       handle: str(raw.user_posted),
       avatarUrl: str(raw.profile_image_link) || undefined,
       followers,
@@ -80,4 +88,6 @@ export function normalizeXPost(raw: Record<string, unknown>): Post {
     engagement,
     metrics: metricsFor(text, hashtags, media, engagement, followers),
   };
+  if (views && views > 0) post.metrics.viewRate = Number(((engagement.total / views) * 100).toFixed(2));
+  return post;
 }
