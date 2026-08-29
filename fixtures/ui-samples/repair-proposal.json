@@ -1,0 +1,33 @@
+{
+  "kind": "recipe.repair_proposed",
+  "recipe": "competitor-blog",
+  "fromVersion": 1,
+  "toVersion": 2,
+  "changes": [
+    {
+      "field": "title",
+      "from": "h1.post-title",
+      "to": "[data-testid=\"entry-title\"]"
+    },
+    {
+      "field": "published",
+      "from": "time.post-date",
+      "to": "[data-testid=\"entry-date\"]"
+    },
+    {
+      "field": "body",
+      "from": ".post-content",
+      "to": "[data-testid=\"entry-body\"]"
+    },
+    {
+      "field": "reactions",
+      "from": "[data-reactions]",
+      "to": "[data-testid=\"reaction-count\"]"
+    }
+  ],
+  "regression": {
+    "fixture": "fixtures/competitor-blog.v1.html",
+    "passed": true
+  },
+  "requiresApproval": true
+}

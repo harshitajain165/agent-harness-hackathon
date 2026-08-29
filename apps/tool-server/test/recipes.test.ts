@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadRecipe } from '../src/recipes/load.ts';
 import { extractWithRecipe, parseNumber } from '../src/recipes/extract.ts';
+import { normalizeLinkedInPost } from '../src/recipes/normalize.ts';
 
 const recipe = loadRecipe('competitor-blog');
 const v1 = readFileSync('fixtures/competitor-blog.v1.html', 'utf8');
@@ -76,4 +77,26 @@ test('a repaired recipe passes against the redesigned page', () => {
   if (!r.ok) return;
   assert.equal(r.data.reactions, 412);
   assert.equal(r.data.title, 'Introducing Realtime Voice Agents');
+});
+
+/* ---------- normalisation, against a real captured Bright Data payload ---------- */
+
+test('a real LinkedIn payload normalises to the UI contract', () => {
+  const raw = JSON.parse(readFileSync('fixtures/brightdata/linkedin-post.raw.json', 'utf8'));
+  
+  const p = normalizeLinkedInPost(raw);
+
+  assert.equal(p.platform, 'linkedin');
+  assert.ok(p.id && p.url.startsWith('https://'));
+  assert.ok(p.author.name, 'author name survives');
+  assert.ok(p.text.length > 0, 'body survives');
+  assert.equal(p.engagement.total, p.engagement.likes + p.engagement.comments);
+  assert.ok(p.hook.length > 0 && p.hook.length <= p.text.length);
+  assert.ok(p.metrics.words > 0);
+  assert.equal(p.metrics.hashtagCount, p.hashtags.length);
+
+  // The point of normalising: the UI and the agent see a fraction of the raw noise.
+  const before = JSON.stringify(raw).length;
+  const after = JSON.stringify(p).length;
+  assert.ok(after < before / 5, `expected a big reduction, got ${before} -> ${after}`);
 });
