@@ -23,9 +23,12 @@ export const agentSpec: TrueForgeApi.AgentSpec = {
     (process.env.DEMO_APP_URL ?? "http://localhost:3100") +
     " as the default target. If a step fails because a selector doesn't exist, call " +
     "inspect_page again — the page may have changed — and retry with a corrected step. " +
-    "Once you have the video, draft the post copy yourself, then call publish_post with the " +
-    "drafted copy once you have something ready to ship. publish_post requires human " +
-    "approval — always wait for it.",
+    "Make the recording feel produced, not just captured: put a short, natural narration " +
+    "line on the 2-4 steps that most need explaining (don't narrate every single step — pauses " +
+    "are fine), and set zoom: true on whichever click/scroll step shows the actual feature " +
+    "landing, so the viewer's eye is pulled to it. Once you have the video, draft the post " +
+    "copy yourself, then call publish_post with the drafted copy once you have something " +
+    "ready to ship. publish_post requires human approval — always wait for it.",
   mcpServers: [
     {
       name: MCP_SERVER_NAME,

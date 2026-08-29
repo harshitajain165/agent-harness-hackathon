@@ -34,7 +34,12 @@ export async function inspectPage(url: string): Promise<{ title: string; element
             let selector: string;
             if (aria) selector = `[aria-label=${JSON.stringify(aria)}]`;
             else if (id) selector = `#${id}`;
-            else if (text) selector = `text=${JSON.stringify(text)}`;
+            // Fuzzy (unquoted), not exact-quoted: exact text= matching requires a single
+            // element whose *own* normalized text equals the target exactly, which fails
+            // whenever the visible text is split across sibling nodes (e.g. an emoji icon in
+            // one <div> and the label in another, both inside one button) — verified this
+            // empirically returns zero matches for exact but one correct match for fuzzy.
+            else if (text) selector = `text=${text}`;
             else selector = el.tagName.toLowerCase();
             return {
               role: el.getAttribute("role") ?? el.tagName.toLowerCase(),

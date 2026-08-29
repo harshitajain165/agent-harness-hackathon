@@ -43,3 +43,7 @@ next-env.d.ts
 
 # recorded demo videos (real files, generated at runtime — not source)
 /public/artifacts/*.webm
+/public/artifacts/*.mp4
+
+# TTS narration cache and other private (non-public-served) generated artifacts
+/artifacts/

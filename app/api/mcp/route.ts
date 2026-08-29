@@ -13,10 +13,11 @@ export const runtime = "nodejs";
  * - `inspect_page` (read-only, no approval): grounds the agent in a target page's real
  *   interactive elements before it authors a record_demo step list.
  * - `record_demo` (plain, no approval): real Playwright recording of an agent-authored
- *   step list against any http(s) URL — see lib/tools/record-demo.ts.
+ *   step list against any http(s) URL, with optional OpenAI TTS narration and time-gated
+ *   zoom composited in via ffmpeg — see lib/tools/record-demo.ts.
  * - `publish_post` (`destructiveHint: true`, so TrueForge's default
  *   `require_approval_for_tools` pauses the turn for it): still a stub — writes to an
- *   in-memory outbox. Real TTS/ffmpeg stitching is a later phase.
+ *   in-memory outbox. Real distribution (actually posting somewhere) is a later phase.
  */
 
 const httpUrl = z
@@ -24,12 +25,21 @@ const httpUrl = z
   .url()
   .refine((value) => /^https?:\/\//i.test(value), { message: "Must be an http(s) URL" });
 
+const narration = z
+  .string()
+  .optional()
+  .describe("Optional voiceover line to narrate during/after this step (synthesized via OpenAI TTS)");
+const zoom = z
+  .boolean()
+  .optional()
+  .describe("Zoom the video into this step's element for its duration");
+
 const stepSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("click"), selector: z.string() }),
-  z.object({ action: z.literal("type"), selector: z.string(), text: z.string() }),
-  z.object({ action: z.literal("press"), selector: z.string().optional(), key: z.string() }),
-  z.object({ action: z.literal("wait"), ms: z.number().min(0).max(5_000) }),
-  z.object({ action: z.literal("scroll"), selector: z.string().optional() }),
+  z.object({ action: z.literal("click"), selector: z.string(), narration, zoom }),
+  z.object({ action: z.literal("type"), selector: z.string(), text: z.string(), narration }),
+  z.object({ action: z.literal("press"), selector: z.string().optional(), key: z.string(), narration }),
+  z.object({ action: z.literal("wait"), ms: z.number().min(0).max(5_000), narration }),
+  z.object({ action: z.literal("scroll"), selector: z.string().optional(), narration, zoom }),
 ]);
 
 // Fake in-memory outbox, so publish_post has somewhere to "publish" to.
@@ -66,7 +76,9 @@ function buildServer() {
         "Record a screen capture of a product demonstrating a feature, by driving a real " +
         "browser through an author-supplied list of steps against any http(s) URL. Call " +
         "inspect_page first to find real selectors — steps with a selector that doesn't " +
-        "exist on the page will fail.",
+        "exist on the page will fail. Any step can carry a `narration` line (synthesized as " +
+        "voiceover and mixed into the final video at that step's real timing) and click/scroll " +
+        "steps can set `zoom: true` to zoom the video into that element for the step's duration.",
       inputSchema: {
         url: httpUrl.describe("The page to record"),
         feature: z.string().describe("The feature being demonstrated (used for labeling only)"),
