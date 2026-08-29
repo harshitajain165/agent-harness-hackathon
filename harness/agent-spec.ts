@@ -56,6 +56,10 @@ export const agentSpec: TrueForgeApi.AgentSpec = {
   ],
   config: {
     sandbox: { enabled: false },
+    // Defaults to 100. One competitor analysis is several search + fetch calls
+    // each, so a multi-competitor turn can approach that; the ceiling is a
+    // runaway-loop stop, not a quality lever, so raise it well clear.
+    iterationLimit: 200,
     // Off for Phase 1: no thread.created/thread.done to handle yet — that's parallel
     // subagent lanes, a later phase that also needs a UI change we're not making now.
     dynamicSubAgents: { enabled: false },
