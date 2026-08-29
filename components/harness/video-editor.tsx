@@ -71,7 +71,7 @@ export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col opacity-100 transition-opacity duration-200 ease-[var(--ease-out)] starting:opacity-0 motion-reduce:transition-none">
       <div className="relative mx-3 mt-3 aspect-video overflow-hidden rounded-[10px] bg-neutral-950">
         {artifact.src ? (
           <video

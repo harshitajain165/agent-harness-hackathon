@@ -158,6 +158,7 @@ async function runLocalAgent(
       { id: "cut-1", name: "assemble_timeline", label: "Assemble timeline", input: text || "create video" },
       { detail: "3 clips" }
     );
+    await sleep(900);
     emit({ type: "artifact", data: SAMPLE_VIDEO });
     await streamText("Draft is in the editor on the right. Play it or click a clip to jump.", emit);
     emit({ type: "done" });
