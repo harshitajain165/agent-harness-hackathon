@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import { attributeRevenue, revenueHeadline } from '../lib/scrapers/attribution.ts';
 import { attributionToRecords, repairToDiff } from '../lib/scrapers/artifacts.ts';
+import { extractVideoFeatures, summariseForAgent } from '../lib/scrapers/analyze.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadRecipe } from '../lib/scrapers/load.ts';
@@ -217,4 +218,41 @@ test('a scraped post records when it was read, not just when it was posted', () 
   const now = new Date('2026-08-29T21:55:26.601Z');
   assert.equal(freshness(p, now), '1h ago');
   assert.equal(freshness({ scrapedAt: undefined }), 'unknown');
+});
+
+/* ---------- video feature extraction ---------- */
+
+test('a filler opener and its cost in seconds are measured, not guessed', () => {
+  const v = JSON.parse(readFileSync('fixtures/brightdata/youtube-video.raw.json', 'utf8'));
+  const f = extractVideoFeatures(v.transcript, v.video_length, Boolean(v._transcript_truncated));
+
+  assert.equal(f.fillerOpener, 'welcome back');
+  assert.ok(f.preambleWords > 20, 'this video buries the point behind a long preamble');
+  assert.ok(f.preambleSeconds > 5);
+  assert.ok(f.opening.startsWith('welcome back to another AI video'));
+});
+
+test('a truncated transcript never reports a pace', () => {
+  // Pace over a fragment is a precise-looking number that is simply wrong.
+  const partial = extractVideoFeatures('welcome back to another video today we', 575, true);
+  assert.equal(partial.wordsPerSecond, 0);
+  assert.equal(partial.transcriptTruncated, true);
+  assert.match(summariseForAgent('t', 'u', partial), /pace: unavailable/);
+
+  // And absence of a CTA cannot be claimed from a fragment.
+  assert.match(summariseForAgent('t', 'u', partial), /not in the portion read/);
+
+  const full = extractVideoFeatures('one two three four five six seven eight nine ten', 4, false);
+  assert.equal(full.wordsPerSecond, 2.5);
+});
+
+test('a tight opening scores better than a rambling one', () => {
+  const tight = extractVideoFeatures(
+    'Voice agents can now join meetings. Drop a Google Meet link and it dials in.', 45, false);
+  const rambling = extractVideoFeatures(
+    "hey guys welcome back to the channel don't forget to subscribe before we get started today", 45, false);
+
+  assert.equal(tight.fillerOpener, null);
+  assert.ok(rambling.fillerOpener, 'the rambling opener is flagged');
+  assert.ok(tight.preambleWords < rambling.preambleWords);
 });
