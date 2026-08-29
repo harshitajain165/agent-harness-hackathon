@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import type { Element } from 'domhandler';
 
 /**
  * A compact structural map of a page, for repairing a broken selector.
@@ -32,7 +33,7 @@ export function outlineHtml(html: string, opts: OutlineOptions = {}): string {
   const lines: string[] = [];
   let truncated = false;
 
-  const walk = (el: cheerio.Element, depth: number): void => {
+  const walk = (el: Element, depth: number): void => {
     if (lines.length >= maxLines) {
       truncated = true;
       return;
@@ -76,12 +77,15 @@ export function outlineHtml(html: string, opts: OutlineOptions = {}): string {
     }
 
     for (const child of $el.children().toArray()) {
-      walk(child as cheerio.Element, addressable ? depth + 1 : depth);
+      walk(child as Element, addressable ? depth + 1 : depth);
     }
   };
 
-  const root = $('body').length ? $('body') : $.root();
-  for (const child of root.children().toArray()) walk(child as cheerio.Element, 0);
+  // $('body') and $.root() have different Cheerio type parameters, so pick the
+  // children first rather than branching on the collection itself.
+  const body = $('body');
+  const top = body.length ? body.children().toArray() : $.root().children().toArray();
+  for (const child of top) walk(child as Element, 0);
 
   if (truncated) lines.push(`… outline truncated at ${maxLines} elements`);
   return lines.join('\n');

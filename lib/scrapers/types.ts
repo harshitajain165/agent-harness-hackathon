@@ -34,7 +34,7 @@ export interface Recipe {
   /** Bumped on every repair. The audit trail lives in git history. */
   version: number;
   target: string;
-  /** Glob-ish pattern the URL must look like, e.g. "https://*/blog/*". */
+  /** Glob-ish pattern the URL must look like, e.g. `https://<host>/blog/<slug>`. */
   url_pattern?: string;
   /** Which Bright Data tool fetches this page. */
   fetch: { tool: string };

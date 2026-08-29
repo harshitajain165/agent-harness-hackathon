@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import type { Element } from 'domhandler';
 import { outlineHtml } from './outline.ts';
 import type { Assertion, ExtractResult, Failure, FieldSpec, Recipe } from './types.ts';
 
@@ -15,7 +16,7 @@ export function parseNumber(raw: string): number | undefined {
   return n;
 }
 
-function valueOf($: cheerio.CheerioAPI, el: cheerio.Element, spec: FieldSpec): unknown {
+function valueOf($: cheerio.CheerioAPI, el: Element, spec: FieldSpec): unknown {
   const $el = $(el);
   switch (spec.as ?? 'text') {
     case 'html':
@@ -72,8 +73,8 @@ export function extractWithRecipe(recipe: Recipe, html: string): ExtractResult {
     if (found.length === 0) continue;
 
     data[field] = spec.all
-      ? found.toArray().map((el) => valueOf($, el as cheerio.Element, spec))
-      : valueOf($, found.get(0) as cheerio.Element, spec);
+      ? found.toArray().map((el) => valueOf($, el as Element, spec))
+      : valueOf($, found.get(0) as Element, spec);
   }
 
   const failures: Failure[] = [];
