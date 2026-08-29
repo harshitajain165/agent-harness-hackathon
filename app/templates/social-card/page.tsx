@@ -15,6 +15,16 @@ export const dynamic = "force-dynamic";
 
 const ACCENT = "#DD7A3C";
 
+// app/api/mcp/route.ts caps headline at 90 chars, but a fixed 68px font that never adapts
+// would still leave a long headline visually cramped (or, before that cap existed, silently
+// clipped by the card's hidden overflow) — scale down for longer text instead.
+function headlineFontSize(length: number) {
+  if (length <= 30) return 68;
+  if (length <= 50) return 58;
+  if (length <= 70) return 48;
+  return 40;
+}
+
 function splitHeadline(headline: string, highlight?: string) {
   if (!highlight) return [{ text: headline, accent: false }];
   const index = headline.indexOf(highlight);
@@ -107,12 +117,14 @@ export default async function SocialCardPage({
 
           <div
             style={{
-              fontSize: 68,
+              fontSize: headlineFontSize(headline.length),
               fontWeight: 500,
               lineHeight: 1.15,
               letterSpacing: "-0.01em",
               color: "#161311",
               maxWidth: 820,
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
             }}
           >
             {parts.map((part, i) =>

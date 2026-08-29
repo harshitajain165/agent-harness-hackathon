@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { chromium } from "playwright";
 
 const ARTIFACTS_DIR = join(process.cwd(), "public", "artifacts");
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// ?? only falls back on undefined/null, not on the empty string .env.example documents this
+// var as defaulting to (`NEXT_PUBLIC_APP_URL=`) — an explicitly-blank value would otherwise
+// survive as "", and `new URL(path, "")` throws, failing every create_image_post call.
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
 const CARD_SIZE = 1080;
 
 export type Slide = {

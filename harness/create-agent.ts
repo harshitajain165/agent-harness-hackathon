@@ -35,8 +35,10 @@ async function main() {
   const { AGENT_NAME, MCP_SERVER_NAME, BRIGHTDATA_SERVER_NAME, agentSpec } = await import("./agent-spec");
   const { TrueForge } = await import("@truefoundry/trueforge-sdk");
 
-  const baseUrl = process.env.TRUEFORGE_BASE_URL ?? "http://localhost:8790";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // ?? only falls back on undefined/null, not on the empty string .env.example documents
+  // these vars as defaulting to — an explicitly-blank value would otherwise survive as "".
+  const baseUrl = process.env.TRUEFORGE_BASE_URL?.trim() || "http://localhost:8790";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
   const mcpSecret = process.env.MCP_SECRET;
   const client = new TrueForge({ baseUrl });
 

@@ -65,12 +65,24 @@ const navStepSchema = z.discriminatedUnion("action", [
 ]);
 
 const slideSchema = z.object({
-  headline: z.string().describe('The card\'s headline text, e.g. "Pulse STT now supports Spanish"'),
+  // Bounded so the fixed-size template always has room to render it — the template scales
+  // font size down for longer text, but a genuinely unbounded string would still eventually
+  // overflow the card (and hidden-overflow silently clip it) or blow up the query URL.
+  headline: z
+    .string()
+    .min(1)
+    .max(90)
+    .describe('The card\'s headline text, e.g. "Pulse STT now supports Spanish" (max 90 chars)'),
   highlight: z
     .string()
+    .max(90)
     .optional()
     .describe('Substring of headline to render in the accent color, e.g. "Spanish"'),
-  eyebrow: z.string().optional().describe('Optional small label above the logo, e.g. "New" or "Launch"'),
+  eyebrow: z
+    .string()
+    .max(24)
+    .optional()
+    .describe('Optional short label above the logo, e.g. "New" or "Launch" (max 24 chars)'),
   caption: z.string().describe("This slide's accompanying post caption (shown next to the image, not on it)"),
 });
 
