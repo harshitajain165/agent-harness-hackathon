@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import { attributeRevenue, revenueHeadline } from '../lib/scrapers/attribution.ts';
 import { attributionToRecords, repairToDiff } from '../lib/scrapers/artifacts.ts';
-import { extractVideoFeatures, summariseForAgent } from '../lib/scrapers/analyze.ts';
+import { countNumericClaims, extractVideoFeatures, summariseForAgent } from '../lib/scrapers/analyze.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadRecipe } from '../lib/scrapers/load.ts';
@@ -255,4 +255,85 @@ test('a tight opening scores better than a rambling one', () => {
   assert.equal(tight.fillerOpener, null);
   assert.ok(rambling.fillerOpener, 'the rambling opener is flagged');
   assert.ok(tight.preambleWords < rambling.preambleWords);
+});
+
+/* ---------- regressions from the Qodo review on PR #9 ---------- */
+
+test('a subscription predating its video is not attributed to it', () => {
+  const source = {
+    loadCampaigns: () => [{
+      videoId: 'v1', title: 'T', url: 'u', platform: 'x',
+      publishedAt: '2026-07-01T00:00:00.000Z', durationSeconds: 45, views: 1000,
+    }],
+    loadSubscriptions: () => [
+      { id: 'a', customerId: 'c', plan: 'growth', mrr: 199, currency: 'usd', status: 'active',
+        createdAt: '2026-07-10T00:00:00.000Z', metadata: { video_id: 'v1' } },
+      // Predates publication — cannot have been driven by the video.
+      { id: 'b', customerId: 'd', plan: 'scale', mrr: 999, currency: 'usd', status: 'active',
+        createdAt: '2026-06-12T00:00:00.000Z', metadata: { video_id: 'v1' } },
+    ],
+  };
+  const [row] = attributeRevenue(source);
+  assert.equal(row.conversions, 1);
+  assert.equal(row.mrr, 199, 'the pre-publication subscription must not inflate revenue');
+});
+
+test('every seeded subscription postdates the video it is attributed to', () => {
+  // Guards the fixture itself: mislabelled dates silently inflate the demo's numbers.
+  const campaigns = JSON.parse(readFileSync('fixtures/revenue/campaigns.json', 'utf8')).campaigns;
+  const subs = JSON.parse(readFileSync('fixtures/revenue/subscriptions.json', 'utf8')).subscriptions;
+  const publishedAt = new Map(campaigns.map((c: any) => [c.videoId, Date.parse(c.publishedAt)]));
+  for (const s of subs) {
+    const pub = publishedAt.get(s.metadata.video_id);
+    assert.ok(Date.parse(s.createdAt) >= pub, `${s.id} predates ${s.metadata.video_id}`);
+  }
+});
+
+test('a zero-revenue top video does not produce an infinite uplift claim', () => {
+  const source = {
+    loadCampaigns: () => [
+      { videoId: 'big', title: 'Most watched', url: 'u', platform: 'x',
+        publishedAt: '2026-01-01T00:00:00.000Z', durationSeconds: 200, views: 90000 },
+      { videoId: 'small', title: 'Small but earning', url: 'u2', platform: 'x',
+        publishedAt: '2026-01-01T00:00:00.000Z', durationSeconds: 45, views: 1000 },
+    ],
+    loadSubscriptions: () => [
+      { id: 'a', customerId: 'c', plan: 'growth', mrr: 199, currency: 'usd', status: 'active',
+        createdAt: '2026-02-01T00:00:00.000Z', metadata: { video_id: 'small' } },
+    ],
+  };
+  const headline = revenueHeadline(attributeRevenue(source));
+  assert.ok(!headline.includes('Infinity'), `headline must never say Infinity: ${headline}`);
+  assert.match(headline, /no attributed revenue/);
+});
+
+test('currencies are never summed together', () => {
+  const source = {
+    loadCampaigns: () => [{
+      videoId: 'v1', title: 'T', url: 'u', platform: 'x',
+      publishedAt: '2026-01-01T00:00:00.000Z', durationSeconds: 45, views: 1000,
+    }],
+    loadSubscriptions: () => [
+      { id: 'a', customerId: 'c', plan: 'growth', mrr: 199, currency: 'usd', status: 'active',
+        createdAt: '2026-02-01T00:00:00.000Z', metadata: { video_id: 'v1' } },
+      { id: 'b', customerId: 'd', plan: 'growth', mrr: 199, currency: 'eur', status: 'active',
+        createdAt: '2026-02-01T00:00:00.000Z', metadata: { video_id: 'v1' } },
+    ],
+  };
+  const [row] = attributeRevenue(source);
+  assert.equal(row.mrr, 199, 'EUR must not be added to USD');
+  assert.equal(row.currency, 'usd');
+  assert.deepEqual(row.mixedCurrencies, ['eur'], 'the excluded currency is surfaced, not hidden');
+});
+
+test('numeric claims catch both leading currency and trailing units', () => {
+  // \b\d\b never matched inside a multi-digit number, and a trailing \b dropped "40% less".
+  assert.equal(countNumericClaims('costs $5 a month, or $50/year, at 40% less latency'), 3);
+  assert.equal(countNumericClaims('300ms latency, 2x faster, 99% uptime'), 3);
+  assert.equal(countNumericClaims('no numbers at all here'), 0);
+});
+
+test('a multi-digit opening counts as substance, not preamble', () => {
+  const f = extractVideoFeatures('300ms latency changes everything for voice agents', 45, false);
+  assert.equal(f.preambleWords, 0, 'opening on a concrete number is not preamble');
 });

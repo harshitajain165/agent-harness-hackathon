@@ -42,6 +42,30 @@ export interface VideoFeatures {
   transcriptTruncated: boolean;
 }
 
+
+/**
+ * Distinct numeric claims — a proxy for how specific a video is.
+ *
+ * Two shapes to catch: a unit trailing the number (300ms, 2x, 40%) and a currency
+ * symbol leading it ($5, $5/month). The trailing letter-units take a word boundary;
+ * `%` must not, since it is itself a non-word character and "40% less" would fail.
+ */
+const CLAIM_PATTERNS = [
+  /\d+(?:\.\d+)?\s*(?:ms|s|x|k|m|bps|dollars?)\b/gi,
+  /\d+(?:\.\d+)?\s*%/g,
+  /[$£€]\s?\d+(?:\.\d+)?/g,
+];
+
+export function countNumericClaims(text: string): number {
+  const found = new Set<string>();
+  for (const pattern of CLAIM_PATTERNS) {
+    for (const match of text.match(pattern) ?? []) {
+      found.add(match.toLowerCase().replace(/\s+/g, ''));
+    }
+  }
+  return found.size;
+}
+
 const CTA = /\b(sign up|try it|get started|link in|check out the|book a demo|start free)\b/i;
 
 export function extractVideoFeatures(
@@ -57,7 +81,9 @@ export function extractVideoFeatures(
 
   // Preamble ends at the first thing that sounds like substance: a number, or a
   // verb that implies showing rather than greeting.
-  const substance = /\b(\d|show you how|here's how|the problem|instead of|used to)\b/i.exec(clean);
+  // \b\d\b would never match inside a multi-digit number — there is no word boundary
+  // between the digits of "300ms", so a concrete numeric opening read as pure preamble.
+  const substance = /(\d|\bshow you how\b|\bhere's how\b|\bthe problem\b|\binstead of\b|\bused to\b)/i.exec(clean);
   const preambleWords = substance
     ? clean.slice(0, substance.index).trim().split(/\s+/).filter(Boolean).length
     : Math.min(words.length, 40);
@@ -75,7 +101,7 @@ export function extractVideoFeatures(
     preambleSeconds: Number((preambleWords / WORDS_PER_SECOND).toFixed(1)),
     opening: words.slice(0, 25).join(' '),
     fillerOpener,
-    numericClaims: new Set(clean.match(/\b\d+(?:\.\d+)?\s*(?:ms|s|x|%|k|m|dollars?|\$)\b/gi) ?? []).size,
+    numericClaims: countNumericClaims(clean),
     hasCallToAction: CTA.test(clean),
     transcriptTruncated,
   };

@@ -13,7 +13,9 @@ type TurnStreamingEvent = TrueForgeApi.TurnStreamingEvent;
  * message, and the resume lands on a new one — see components/harness/agent-harness.tsx).
  */
 export type StreamContext = {
-  deltaByIndex: Map<number, { id?: string; name: string; args: string }>;
+  /** Keyed `threadId:index` — subagents run concurrently and each restarts its own
+   *  tool-call index numbering, so an index alone collides across threads. */
+  deltaByIndex: Map<string, { id?: string; name: string; args: string }>;
   emittedToolCalls: Set<string>;
   /** Subagent lanes, keyed by threadId, rendered as thinking steps. */
   subagents: Map<string, ThinkingStep>;
@@ -137,17 +139,21 @@ export function mapTurnEvent(
       }
 
       for (const call of event.toolCalls ?? []) {
-        let entry = ctx.deltaByIndex.get(call.index);
+        // Namespace by thread: with dynamic subagents several streams are live at once
+        // and they commonly both start at index 0, which would otherwise overwrite or
+        // concatenate one call's name and arguments into another's.
+        const key = `${event.threadId}:${call.index}`;
+        let entry = ctx.deltaByIndex.get(key);
         // A new id at an already-used index means a new tool call started there (the
         // model can make several sequential tool calls, each restarting index numbering) —
         // start a fresh accumulator rather than appending onto the previous call's text.
         if (call.id && entry?.id !== call.id) {
           entry = { id: call.id, name: "", args: "" };
-          ctx.deltaByIndex.set(call.index, entry);
+          ctx.deltaByIndex.set(key, entry);
         }
         if (!entry) {
           entry = { name: "", args: "" };
-          ctx.deltaByIndex.set(call.index, entry);
+          ctx.deltaByIndex.set(key, entry);
         }
         if (call.function?.name) entry.name += call.function.name;
         if (call.function?.arguments) entry.args += call.function.arguments;

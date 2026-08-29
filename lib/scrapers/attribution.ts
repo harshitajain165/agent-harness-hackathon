@@ -49,6 +49,8 @@ export interface Attribution {
   mrr: number;
   arr: number;
   currency: string;
+  /** Currencies present but excluded from `mrr`, when a campaign mixes them. */
+  mixedCurrencies?: string[];
   /** Dollars of MRR per 1,000 views — the number that reorders the leaderboard. */
   revenuePerThousandViews: number;
   /** Share of views that became a paying subscription, as a percentage. */
@@ -97,10 +99,26 @@ export function attributeRevenue(source: RevenueSource = fixtureSource): Attribu
 
   return campaigns
     .map((c) => {
-      const subs = byCampaign.get(c.videoId) ?? [];
-      const mrr = subs.reduce((t, s) => t + s.mrr, 0);
+      const publishedAt = Date.parse(c.publishedAt);
+      const all = byCampaign.get(c.videoId) ?? [];
+      // A subscription that predates the video cannot have been driven by it. Without
+      // this guard a mislabelled or backfilled metadata.video_id silently inflates the
+      // campaign's revenue, and the per-view figure with it.
+      const subs = Number.isFinite(publishedAt)
+        ? all.filter((sub) => {
+            const created = Date.parse(sub.createdAt);
+            return !Number.isFinite(created) || created >= publishedAt;
+          })
+        : all;
+      // Summing across currencies would produce a number that is not money in any of
+      // them. Report the dominant currency's subscriptions and flag the rest rather
+      // than silently adding EUR to USD.
+      const currencies = new Set(subs.map((sub) => sub.currency));
+      const currency = subs[0]?.currency ?? 'usd';
+      const counted = currencies.size > 1 ? subs.filter((sub) => sub.currency === currency) : subs;
+      const mrr = counted.reduce((t, sub) => t + sub.mrr, 0);
       const planMix: Record<string, number> = {};
-      for (const s of subs) planMix[s.plan] = (planMix[s.plan] ?? 0) + 1;
+      for (const sub of counted) planMix[sub.plan] = (planMix[sub.plan] ?? 0) + 1;
 
       return {
         videoId: c.videoId,
@@ -108,12 +126,15 @@ export function attributeRevenue(source: RevenueSource = fixtureSource): Attribu
         url: c.url,
         durationSeconds: c.durationSeconds,
         views: c.views,
-        conversions: subs.length,
+        conversions: counted.length,
         mrr,
         arr: mrr * 12,
-        currency: subs[0]?.currency ?? 'usd',
+        currency,
+        ...(currencies.size > 1
+          ? { mixedCurrencies: [...currencies].filter((c) => c !== currency) }
+          : {}),
         revenuePerThousandViews: c.views > 0 ? round((mrr / c.views) * 1000) : 0,
-        conversionRate: c.views > 0 ? round((subs.length / c.views) * 100) : 0,
+        conversionRate: c.views > 0 ? round((counted.length / c.views) * 100) : 0,
         planMix,
       };
     })
@@ -132,9 +153,16 @@ export function revenueHeadline(rows: Attribution[]): string {
   if (best.videoId === mostViewed.videoId) {
     return `"${best.title}" leads on both reach and revenue — $${best.revenuePerThousandViews} MRR per 1,000 views.`;
   }
-  const ratio = mostViewed.revenuePerThousandViews > 0
-    ? round(best.revenuePerThousandViews / mostViewed.revenuePerThousandViews, 1)
-    : Infinity;
+  // The most-viewed campaign can have no attributed revenue at all, in which case a
+  // ratio is undefined — say so rather than reporting "Infinity× more per view".
+  if (mostViewed.revenuePerThousandViews <= 0) {
+    return (
+      `"${mostViewed.title}" got the most views (${mostViewed.views.toLocaleString()}) but has no ` +
+      `attributed revenue, while "${best.title}" earned $${best.revenuePerThousandViews} MRR ` +
+      `per 1,000 views.`
+    );
+  }
+  const ratio = round(best.revenuePerThousandViews / mostViewed.revenuePerThousandViews, 1);
   return (
     `"${mostViewed.title}" got the most views (${mostViewed.views.toLocaleString()}) but ` +
     `"${best.title}" earned ${ratio}× more per view — $${best.revenuePerThousandViews} vs ` +
