@@ -26,7 +26,11 @@ import {
   EmptyStateTitle,
 } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -48,6 +52,7 @@ import {
   type PublishStatus,
 } from "@/lib/home/publishes";
 import type { HomeRankedItem } from "@/lib/home/types";
+import { cn, floatingSurfaceClassName } from "@/lib/utils";
 import { SAMPLE_VIDEOS } from "./home-ranked-lists";
 import { Sparkline } from "./sparkline";
 
@@ -106,8 +111,16 @@ function MetricPlot({
 export function PublishesTable({ videos = SAMPLE_VIDEOS }: { videos?: HomeRankedItem[] }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<PublishSort>("impressions");
-  const [rows, setRows] = useState(() => buildPublishRows(videos));
+  const [overrides, setOverrides] = useState<
+    Record<string, Partial<Pick<PublishRow, "featured" | "status">>>
+  >({});
   const [selected, setSelected] = useState<string[]>([]);
+
+  const incoming = useMemo(() => buildPublishRows(videos), [videos]);
+  const rows = useMemo(
+    () => incoming.map((row) => ({ ...row, ...overrides[row.id] })),
+    [incoming, overrides],
+  );
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -121,7 +134,12 @@ export function PublishesTable({ videos = SAMPLE_VIDEOS }: { videos?: HomeRanked
     visible.length > 0 && visible.every((row) => selected.includes(row.id));
 
   const toggleAll = (checked: boolean) => {
-    setSelected(checked ? visible.map((row) => row.id) : []);
+    const visibleIds = visible.map((row) => row.id);
+    setSelected((current) => {
+      if (checked) return [...new Set([...current, ...visibleIds])];
+      const hide = new Set(visibleIds);
+      return current.filter((id) => !hide.has(id));
+    });
   };
 
   const toggleOne = (id: string, checked: boolean) => {
@@ -131,15 +149,11 @@ export function PublishesTable({ videos = SAMPLE_VIDEOS }: { videos?: HomeRanked
   };
 
   const setFeatured = (id: string, featured: boolean) => {
-    setRows((current) =>
-      current.map((row) => (row.id === id ? { ...row, featured } : row)),
-    );
+    setOverrides((current) => ({ ...current, [id]: { ...current[id], featured } }));
   };
 
   const setStatus = (id: string, status: PublishStatus) => {
-    setRows((current) =>
-      current.map((row) => (row.id === id ? { ...row, status } : row)),
-    );
+    setOverrides((current) => ({ ...current, [id]: { ...current[id], status } }));
   };
 
   return (
@@ -155,7 +169,10 @@ export function PublishesTable({ videos = SAMPLE_VIDEOS }: { videos?: HomeRanked
             >
               <ChevronsUpDownIcon className="size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
+            <DropdownMenuContent
+              align="start"
+              className={cn(floatingSurfaceClassName, "w-44 rounded-[10px]")}
+            >
               {SORTS.map((item) => (
                 <DropdownMenuItem
                   key={item.id}
@@ -170,16 +187,17 @@ export function PublishesTable({ videos = SAMPLE_VIDEOS }: { videos?: HomeRanked
           <IconButton aria-label="Filter publishes" variant="tertiary" size="sm">
             <FilterIcon className="size-4" />
           </IconButton>
-          <div className="relative w-[200px]">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-fg-tertiary" />
-            <Input
+          <InputGroup className="w-[200px]">
+            <InputGroupAddon align="inline-start">
+              <SearchIcon className="size-4" />
+            </InputGroupAddon>
+            <InputGroupInput
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
               aria-label="Search publishes"
-              className="pl-8"
             />
-          </div>
+          </InputGroup>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -187,7 +205,10 @@ export function PublishesTable({ videos = SAMPLE_VIDEOS }: { videos?: HomeRanked
           >
             <MoreHorizontalIcon className="size-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuContent
+            align="end"
+            className={cn(floatingSurfaceClassName, "w-44 rounded-[10px]")}
+          >
             <DropdownMenuItem>Export</DropdownMenuItem>
             <DropdownMenuItem>Customize columns</DropdownMenuItem>
           </DropdownMenuContent>
@@ -268,7 +289,10 @@ export function PublishesTable({ videos = SAMPLE_VIDEOS }: { videos?: HomeRanked
                       <ChevronDownIcon className="size-3.5" />
                     </Pill>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-32">
+                  <DropdownMenuContent
+                    align="start"
+                    className={cn(floatingSurfaceClassName, "w-32 rounded-[10px]")}
+                  >
                     <DropdownMenuItem
                       selected={row.status === "live"}
                       onClick={() => setStatus(row.id, "live")}

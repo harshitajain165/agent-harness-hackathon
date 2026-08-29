@@ -32,6 +32,7 @@ export type HomeDashboardProps = {
   channels?: HomeRankedItem[];
   metric?: HomeMetricKind;
   onMetricChange?: (metric: HomeMetricKind) => void;
+  nowSec?: number;
 };
 
 export const EMPTY_HOME_METRICS: HomeMetrics = {

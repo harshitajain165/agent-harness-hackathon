@@ -1,7 +1,7 @@
 import { consumeSseStream } from "./sse";
 import type { AgentEvent, ChatMessageInput, ConfirmRequest } from "./types";
 
-function harnessHeaders(): HeadersInit {
+export function harnessHeaders(): HeadersInit {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const secret = process.env.NEXT_PUBLIC_HARNESS_SECRET;
   if (secret) headers["x-harness-secret"] = secret;

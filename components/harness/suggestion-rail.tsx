@@ -249,7 +249,7 @@ export function SuggestionRail({
                 className={cn(
                   "shadow-none",
                   selected
-                    ? "bg-neutral-50 text-fg hover:bg-neutral-50"
+                    ? "bg-neutral-100 text-fg hover:bg-neutral-100"
                     : "text-fg-tertiary hover:bg-transparent hover:text-fg"
                 )}
               >

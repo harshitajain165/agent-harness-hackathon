@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-const PAGE_CAP = 200;
+const PAGE_CAP = 2000;
 
 export type AttributedStripeRevenue = {
   connected: boolean;
@@ -8,6 +8,7 @@ export type AttributedStripeRevenue = {
   payments: number;
   subscriptions: number;
   currency: "usd";
+  truncated?: boolean;
 };
 
 const EMPTY: AttributedStripeRevenue = {
@@ -79,13 +80,30 @@ function invoicePaymentIds(invoice: Stripe.Invoice): { charges: Set<string>; int
 
 async function collect<T>(
   iterator: AsyncIterable<T>,
-): Promise<T[]> {
+): Promise<{ items: T[]; truncated: boolean }> {
   const items: T[] = [];
   for await (const item of iterator) {
     items.push(item);
-    if (items.length >= PAGE_CAP) break;
+    if (items.length >= PAGE_CAP) {
+      return { items, truncated: true };
+    }
   }
-  return items;
+  return { items, truncated: false };
+}
+
+function invoiceNetPaid(
+  invoice: Stripe.Invoice,
+  chargeById: Map<string, Stripe.Charge>,
+): number {
+  const paid = invoice.amount_paid ?? 0;
+  const paymentIds = invoicePaymentIds(invoice);
+  let chargeRefunds = 0;
+  for (const id of paymentIds.charges) {
+    const charge = chargeById.get(id);
+    if (charge) chargeRefunds += charge.amount_refunded ?? 0;
+  }
+  const creditNotes = invoice.post_payment_credit_notes_amount ?? 0;
+  return Math.max(0, paid - Math.max(chargeRefunds, creditNotes));
 }
 
 export async function getAttributedStripeRevenue(
@@ -101,7 +119,7 @@ export async function getAttributedStripeRevenue(
 
   const stripe = new Stripe(secret);
 
-  const [charges, invoices] = await Promise.all([
+  const [chargePage, invoicePage] = await Promise.all([
     collect(
       stripe.charges.list({
         limit: 100,
@@ -116,6 +134,11 @@ export async function getAttributedStripeRevenue(
       }),
     ),
   ]);
+
+  const charges = chargePage.items;
+  const invoices = invoicePage.items;
+  const truncated = chargePage.truncated || invoicePage.truncated;
+  const chargeById = new Map(charges.map((charge) => [charge.id, charge]));
 
   const invoiceChargeIds = new Set<string>();
   const invoiceIntentIds = new Set<string>();
@@ -139,7 +162,7 @@ export async function getAttributedStripeRevenue(
   for (const invoice of invoices) {
     if (invoice.currency !== "usd") continue;
     if (!videoIdFromInvoice(invoice, allowed)) continue;
-    subscriptionsCents += invoice.amount_paid ?? 0;
+    subscriptionsCents += invoiceNetPaid(invoice, chargeById);
   }
 
   const payments = centsToDollars(paymentsCents);
@@ -151,5 +174,6 @@ export async function getAttributedStripeRevenue(
     payments,
     subscriptions,
     currency: "usd",
+    truncated,
   };
 }

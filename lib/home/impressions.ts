@@ -3,7 +3,7 @@ import type { HomeRankedItem } from "./types";
 
 const HOUR_SECS = 60 * 60;
 const DAY_SECS = 24 * HOUR_SECS;
-const HISTORY_DAYS = 21;
+const HISTORY_DAYS = 90;
 const TOP_POST_SERIES = 3;
 const POST_COLORS = ["#404040", "#737373", "#a3a3a3"] as const;
 
@@ -11,7 +11,7 @@ export const IMPRESSION_WINDOWS = [
   { id: "today" as const, label: "today", secs: DAY_SECS },
   { id: "7d" as const, label: "7d", secs: 7 * DAY_SECS },
   { id: "30d" as const, label: "30d", secs: 30 * DAY_SECS },
-  { id: "lifetime" as const, label: "lifetime", secs: 90 * DAY_SECS },
+  { id: "lifetime" as const, label: "lifetime", secs: HISTORY_DAYS * DAY_SECS },
 ];
 
 export const DEFAULT_IMPRESSION_WINDOW = DAY_SECS;

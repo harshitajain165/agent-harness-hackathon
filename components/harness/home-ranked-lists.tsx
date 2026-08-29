@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDownIcon, PlayIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/empty-state";
 import { Text } from "@/components/ui/text";
 import type { HomeMetricKind, HomeRankedItem } from "@/lib/home/types";
+import { cn, floatingSurfaceClassName } from "@/lib/utils";
 
 const METRICS: { id: HomeMetricKind; label: string }[] = [
   { id: "impressions", label: "Impression attribution" },
@@ -87,7 +88,10 @@ function MetricMenu({
         {label}
         <ChevronDownIcon className="size-3.5" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent
+        align="end"
+        className={cn(floatingSurfaceClassName, "w-56 rounded-[10px]")}
+      >
         {METRICS.map((item) => (
           <DropdownMenuItem
             key={item.id}
@@ -135,7 +139,16 @@ export function RankedColumn({
   fallbackIcon: "play" | "none";
   empty: string;
 }) {
-  const max = Math.max(...items.map((item) => item[metric]), 0);
+  const ranked = useMemo(
+    () =>
+      [...items].sort((a, b) => {
+        const delta = b[metric] - a[metric];
+        if (delta !== 0) return delta;
+        return a.label.localeCompare(b.label);
+      }),
+    [items, metric],
+  );
+  const max = Math.max(...ranked.map((item) => item[metric]), 0);
 
   return (
     <div className="flex min-w-0 flex-1 flex-col px-5 pt-4 pb-5">
@@ -146,7 +159,7 @@ export function RankedColumn({
         <MetricMenu metric={metric} onChange={onMetricChange} />
       </div>
 
-      {items.length === 0 ? (
+      {ranked.length === 0 ? (
         <EmptyState className="mx-auto py-8">
           <EmptyStateTitle className="text-sm font-normal text-fg-secondary">
             Nothing published yet
@@ -157,7 +170,7 @@ export function RankedColumn({
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-1">
-          {items.map((item) => {
+          {ranked.map((item) => {
             const value = item[metric];
             const width = max <= 0 ? 0 : Math.max(12, (value / max) * 100);
             return (

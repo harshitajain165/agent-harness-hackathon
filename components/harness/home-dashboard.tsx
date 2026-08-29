@@ -1,12 +1,13 @@
 "use client";
 
 import { Liveline } from "liveline";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CircleInfoIcon } from "@/components/icons";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/text";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip";
+import { harnessHeaders } from "@/lib/agent/client";
 import {
   buildImpressionHistory,
   DEFAULT_IMPRESSION_WINDOW,
@@ -14,12 +15,18 @@ import {
   formatImpressionTime,
   formatImpressionsCount,
   IMPRESSION_WINDOWS,
+  sumImpressions,
 } from "@/lib/home/impressions";
 import { formatRevenueAmount, sumVideoRevenue } from "@/lib/home/revenue";
 import { HOME_PERIODS, type HomeDashboardProps, type HomePeriod } from "@/lib/home/types";
 import type { AttributedStripeRevenue } from "@/lib/stripe/attributed-revenue";
 import { cn } from "@/lib/utils";
 import { HomeRankedLists, SAMPLE_VIDEOS } from "./home-ranked-lists";
+
+type RevenueState =
+  | { status: "idle" }
+  | { status: "ready"; data: AttributedStripeRevenue }
+  | { status: "error" };
 
 function daypart(date = new Date()) {
   const hour = date.getHours();
@@ -28,29 +35,65 @@ function daypart(date = new Date()) {
   return "Evening";
 }
 
+function useChartNowSec(override?: number) {
+  const cached = useRef<number | undefined>(undefined);
+  return useSyncExternalStore(
+    () => () => {},
+    () => {
+      if (override != null) return override;
+      if (cached.current == null) cached.current = Math.floor(Date.now() / 1000);
+      return cached.current;
+    },
+    () => override,
+  );
+}
+
 function useAttributedRevenue(videoIds: string[]) {
-  const [stripe, setStripe] = useState<AttributedStripeRevenue | null>(null);
+  const [state, setState] = useState<RevenueState>({ status: "idle" });
 
   useEffect(() => {
-    if (videoIds.length === 0) {
-      setStripe(null);
-      return;
-    }
+    if (videoIds.length === 0) return;
 
     const controller = new AbortController();
     const ids = encodeURIComponent(videoIds.join(","));
 
-    fetch(`/api/home/revenue?ids=${ids}`, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: AttributedStripeRevenue | null) => {
-        if (data) setStripe(data);
+    fetch(`/api/home/revenue?ids=${ids}`, {
+      headers: harnessHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return (await response.json()) as AttributedStripeRevenue;
       })
-      .catch(() => {});
+      .then((data) => {
+        setState({ status: "ready", data });
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setState({ status: "error" });
+      });
 
     return () => controller.abort();
   }, [videoIds]);
 
-  return stripe;
+  return videoIds.length === 0 ? { status: "idle" as const } : state;
+}
+
+function attributedRevenueValue(
+  metrics: HomeDashboardProps["metrics"],
+  stripe: RevenueState,
+  videos: HomeDashboardProps["videos"],
+): { amount: number | null; truncated: boolean } {
+  if (metrics?.attributedRevenue != null) {
+    return { amount: metrics.attributedRevenue, truncated: false };
+  }
+  if (stripe.status === "error") {
+    return { amount: null, truncated: false };
+  }
+  if (stripe.status === "ready" && stripe.data.connected) {
+    return { amount: stripe.data.total, truncated: Boolean(stripe.data.truncated) };
+  }
+  return { amount: sumVideoRevenue(videos ?? []), truncated: false };
 }
 
 function MetricInfo({ label }: { label: string }) {
@@ -169,19 +212,26 @@ export function HomeDashboard({
   channels,
   metric,
   onMetricChange,
+  nowSec: nowSecProp,
 }: HomeDashboardProps) {
   const [periodUncontrolled, setPeriodUncontrolled] = useState<HomePeriod>("today");
   const [greeting, setGreeting] = useState(`Hello, ${greetingName}`);
+  const nowSec = useChartNowSec(nowSecProp);
   const period = periodProp ?? periodUncontrolled;
   const windowSecs =
     IMPRESSION_WINDOWS.find((item) => item.id === period)?.secs ?? DEFAULT_IMPRESSION_WINDOW;
-  const impressionHistory = useMemo(() => buildImpressionHistory(videos), [videos]);
+  const impressionHistory = useMemo(
+    () => (nowSec == null ? null : buildImpressionHistory(videos, nowSec)),
+    [videos, nowSec],
+  );
   const videoIds = useMemo(() => videos.map((video) => video.id), [videos]);
   const stripeRevenue = useAttributedRevenue(videoIds);
-  const totalImpressions = metrics?.impressions ?? impressionHistory.totalImpressions;
-  const attributedRevenue =
-    metrics?.attributedRevenue ??
-    (stripeRevenue?.connected ? stripeRevenue.total : sumVideoRevenue(videos));
+  const totalImpressions = metrics?.impressions ?? sumImpressions(videos);
+  const { amount: attributedRevenue, truncated: revenueTruncated } = attributedRevenueValue(
+    metrics,
+    stripeRevenue,
+    videos,
+  );
 
   useEffect(() => {
     setGreeting(`${daypart()}, ${greetingName}`);
@@ -233,7 +283,7 @@ export function HomeDashboard({
               </div>
             </div>
 
-            <div className="flex min-h-[400px] flex-col gap-1 rounded-[14px] border-[0.5px] border-neutral-150 bg-neutral-100 p-1">
+            <div className="flex min-h-[400px] flex-col gap-1 rounded-[14px] border-[0.5px] border-neutral-200 bg-neutral-100 p-1">
               <div className="flex gap-1">
                 <MetricCard
                   label="Impressions"
@@ -249,15 +299,21 @@ export function HomeDashboard({
                 />
                 <MetricCard
                   label="Revenue"
-                  hint="Stripe subscriptions and payments attributed to the videos on your list."
-                  value={formatRevenueAmount(attributedRevenue)}
+                  hint={
+                    revenueTruncated
+                      ? "Partial Stripe total — older charges were not included."
+                      : attributedRevenue == null
+                        ? "Stripe revenue is unavailable right now."
+                        : "Stripe subscriptions and payments attributed to the videos on your list."
+                  }
+                  value={attributedRevenue == null ? "—" : formatRevenueAmount(attributedRevenue)}
                   unit="$"
                   unitFirst
                 />
               </div>
               <ImpressionsChart
-                series={impressionHistory.series}
-                empty={videos.length === 0}
+                series={impressionHistory?.series ?? []}
+                empty={videos.length === 0 || impressionHistory == null}
                 windowSecs={windowSecs}
               />
             </div>
