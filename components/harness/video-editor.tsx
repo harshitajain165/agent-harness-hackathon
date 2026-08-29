@@ -18,15 +18,20 @@ function clipAt(clips: VideoClip[], time: number) {
 
 export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
   const laneRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [selectedId, setSelectedId] = useState(artifact.clips[0]?.id);
   const duration = artifact.durationMs;
   const current = clipAt(artifact.clips, time);
   const selected = artifact.clips.find((clip) => clip.id === selectedId);
+  const hasVideo = Boolean(artifact.src);
 
+  // With a real file, the <video> element is the source of truth for time/playing —
+  // synced via its own events below. Without one (older/mock artifacts with just clip
+  // labels), fall back to a fake clock so the scrubber still animates.
   useEffect(() => {
-    if (!playing) return;
+    if (hasVideo || !playing) return;
     const started = Date.now();
     const origin = time;
     const id = window.setInterval(() => {
@@ -41,9 +46,21 @@ export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
     return () => window.clearInterval(id);
     // Capture start time when playback begins.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, duration]);
+  }, [hasVideo, playing, duration]);
 
-  const seek = (next: number) => setTime(Math.min(duration, Math.max(0, next)));
+  useEffect(() => {
+    if (!hasVideo) return;
+    const video = videoRef.current;
+    if (!video) return;
+    if (playing) video.play().catch(() => setPlaying(false));
+    else video.pause();
+  }, [hasVideo, playing]);
+
+  const seek = (next: number) => {
+    const clamped = Math.min(duration, Math.max(0, next));
+    setTime(clamped);
+    if (hasVideo && videoRef.current) videoRef.current.currentTime = clamped / 1000;
+  };
 
   const seekFromClientX = (clientX: number) => {
     const lane = laneRef.current;
@@ -55,10 +72,22 @@ export function VideoEditor({ artifact }: { artifact: VideoArtifact }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="mx-3 mt-3 flex aspect-video items-center justify-center rounded-[10px] bg-neutral-950">
-        <Text size="sm" weight="medium" className="text-on-inverted">
-          {current?.label ?? artifact.title}
-        </Text>
+      <div className="relative mx-3 mt-3 aspect-video overflow-hidden rounded-[10px] bg-neutral-950">
+        {artifact.src ? (
+          <video
+            ref={videoRef}
+            src={artifact.src}
+            className="h-full w-full object-contain"
+            onTimeUpdate={(event) => setTime(event.currentTarget.currentTime * 1000)}
+            onEnded={() => setPlaying(false)}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Text size="sm" weight="medium" className="text-on-inverted">
+              {current?.label ?? artifact.title}
+            </Text>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 px-3 py-2">

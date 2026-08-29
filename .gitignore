@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# recorded demo videos (real files, generated at runtime — not source)
+/public/artifacts/*.webm
