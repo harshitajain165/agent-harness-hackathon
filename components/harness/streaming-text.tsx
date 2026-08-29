@@ -1,9 +1,69 @@
 "use client";
 
-import { CopyIcon } from "@/components/icons";
+import { ArrowCornerDownLeftIcon, CopyIcon } from "@/components/icons";
 import { IconButton } from "@/components/ui/icon-button";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
+
+export type FollowUp = {
+  id: string;
+  label: string;
+  /** When set, the harness should `send()` this prompt. Export has no prompt. */
+  prompt?: string;
+};
+
+export const VIDEO_FOLLOW_UPS: FollowUp[] = [
+  {
+    id: "slack",
+    label: "Send to Slack for approval",
+    prompt: "Send this video to Slack for approval",
+  },
+  { id: "export", label: "Export video" },
+  { id: "publish", label: "Publish to channels", prompt: "Publish to channels" },
+  { id: "voiceover", label: "Rewrite the voiceover", prompt: "Rewrite the voiceover" },
+];
+
+export function FollowUpList({
+  items,
+  disabled,
+  onFollowUp,
+}: {
+  items: FollowUp[];
+  disabled?: boolean;
+  onFollowUp: (item: FollowUp) => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="w-full">
+      <Text size="sm" weight="medium" color="secondary">
+        Follow-ups
+      </Text>
+      <div className="mt-0.5 flex flex-col">
+        {items.map((item, index) => (
+          <button
+            key={item.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => onFollowUp(item)}
+            className={cn(
+              "-mx-1.5 flex items-center gap-2 rounded-[7px] border-b border-neutral-200 px-1.5 py-1.5 text-left text-sm text-fg",
+              "transition-colors duration-150 last:border-b-0 hover:bg-neutral-100",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-border-focus",
+              "disabled:pointer-events-none disabled:text-fg-secondary"
+            )}
+            style={{
+              animation: `fade-up 350ms cubic-bezier(0.23, 1, 0.32, 1) ${index * 90}ms both`,
+            }}
+          >
+            <ArrowCornerDownLeftIcon className="size-3.5 shrink-0 text-fg-tertiary" />
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function StreamingText({
   text,
@@ -15,7 +75,7 @@ export function StreamingText({
   error?: string;
 }) {
   return (
-    <div className="w-full max-w-[640px]">
+    <div className="w-full">
       {text || streaming ? (
         <p className="text-sm leading-relaxed text-fg whitespace-pre-wrap">
           {text}

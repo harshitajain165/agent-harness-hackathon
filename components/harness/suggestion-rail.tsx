@@ -26,7 +26,7 @@ const CARDS: Card[] = [
   {
     id: "upload-style",
     category: ["recommended", "educational"],
-    prompt: "Upload your own style",
+    prompt: "Create a film from this brief: [paste notes]",
     title: "Upload your own style",
     description: "Upload a .md file that guides the type of animations and designs",
     preview: { kind: "upload" },
@@ -34,7 +34,16 @@ const CARDS: Card[] = [
   {
     id: "linear-video",
     category: ["recommended", "launch"],
-    prompt: "create video",
+    prompt: [
+      "Create a Linear-style product walkthrough video for [product name].",
+      "",
+      "Release: [release]",
+      "Audience: [audience]",
+      "Tone: [calm, precise]",
+      "Voiceover: [English]",
+      "Show: issue triage and the launch of [feature]",
+      "Length: [30 seconds]",
+    ].join("\n"),
     title: "Linear",
     description: "Add your own prompt, configure voice, language and more",
     brand: { name: "Linear", logo: "/recommended/linear-logo.svg" },
@@ -47,7 +56,16 @@ const CARDS: Card[] = [
   {
     id: "interfere-video",
     category: ["recommended", "launch"],
-    prompt: "create video",
+    prompt: [
+      "Create an Interfere-style launch video for [product name].",
+      "",
+      "Audience: [audience]",
+      "The problem we interrupt: [status quo]",
+      "Tone: [bold, kinetic]",
+      "Voiceover: [English]",
+      "Show: the before and after of [workflow]",
+      "Length: [30 seconds]",
+    ].join("\n"),
     title: "Interfere",
     description: "Add your own prompt, configure voice, language and more",
     brand: { name: "Interfere", logo: "/recommended/interfere-logo.jpg" },
@@ -149,10 +167,10 @@ function SuggestionCard({
       className="w-[241px] shrink-0 text-left outline-none focus-visible:rounded-[10px] focus-visible:ring-2 focus-visible:ring-brand-border-focus"
     >
       <CardPreview card={card} videoRef={videoRef} />
-      <div className="mt-6 flex flex-col items-start gap-2">
+      <div className="mt-8 flex flex-col items-start gap-3">
         {card.brand ? (
           <span className="flex items-center gap-2">
-            <span className="relative size-6 shrink-0 overflow-clip">
+            <span className="relative size-6 shrink-0 overflow-clip rounded-[6px]">
               <img
                 src={card.brand.logo}
                 alt=""
@@ -220,9 +238,9 @@ function useRailEdges(category: Category) {
 }
 
 export function SuggestionRail({
-  onSelect,
+  onPrefill,
 }: {
-  onSelect: (prompt: string) => void;
+  onPrefill: (prompt: string) => void;
 }) {
   const [category, setCategory] = useState<Category>("recommended");
   const cards = useMemo(
@@ -269,13 +287,13 @@ export function SuggestionRail({
         </IconButton>
       </div>
 
-      <div className="relative mt-6">
+      <div className="relative mt-10">
         <div
           ref={railRef}
           className="flex gap-7 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {cards.map((card) => (
-            <SuggestionCard key={card.id} card={card} onSelect={onSelect} />
+            <SuggestionCard key={card.id} card={card} onSelect={onPrefill} />
           ))}
         </div>
         <div

@@ -21,7 +21,7 @@ export function BrandMark({
       <span className={cell} />
       <span className={muted} />
       <span className={muted} />
-      <span className={cell} />
+      <span />
     </span>
   );
 }

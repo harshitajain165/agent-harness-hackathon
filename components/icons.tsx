@@ -273,15 +273,54 @@ export function SpacebarIcon(props: IconProps) {
   return <Icon name="IconSpacebar" {...props} />;
 }
 
+export function HeartIcon(props: IconProps) {
+  return <Icon name="IconHeart" {...props} />;
+}
+
+export function ChatBubbleIcon(props: IconProps) {
+  return <Icon name="IconChatBubble7" {...props} />;
+}
+
+export function RepeatIcon(props: IconProps) {
+  return <Icon name="IconRepeat" {...props} />;
+}
+
+export function BarChartIcon(props: IconProps) {
+  return <Icon name="IconChart2" {...props} />;
+}
+
+export function BookmarkIcon(props: IconProps) {
+  return <Icon name="IconBookmark" {...props} />;
+}
+
+export function ShareIcon(props: IconProps) {
+  return <Icon name="IconShareOs" {...props} />;
+}
+
+export function ThumbsUpIcon(props: IconProps) {
+  return <Icon name="IconThumbsUp" {...props} />;
+}
+
+export function SendIcon(props: IconProps) {
+  return <Icon name="IconSend" {...props} />;
+}
+
+export function PinIcon(props: IconProps) {
+  return <Icon name="IconPin" {...props} />;
+}
+
 ArrowCornerDownLeftIcon.displayName = "ArrowCornerDownLeftIcon";
 ArrowDownIcon.displayName = "ArrowDownIcon";
 ArrowRightIcon.displayName = "ArrowRightIcon";
 ArrowUpIcon.displayName = "ArrowUpIcon";
 AltIcon.displayName = "AltIcon";
+BarChartIcon.displayName = "BarChartIcon";
 BellIcon.displayName = "BellIcon";
 BoldIcon.displayName = "BoldIcon";
+BookmarkIcon.displayName = "BookmarkIcon";
 BrowserIcon.displayName = "BrowserIcon";
 CalendarIcon.displayName = "CalendarIcon";
+ChatBubbleIcon.displayName = "ChatBubbleIcon";
 CheckCircleIcon.displayName = "CheckCircleIcon";
 CheckIcon.displayName = "CheckIcon";
 Checkmark2MediumIcon.displayName = "Checkmark2MediumIcon";
@@ -306,6 +345,7 @@ FilterIcon.displayName = "FilterIcon";
 FlagIcon.displayName = "FlagIcon";
 GlobeIcon.displayName = "GlobeIcon";
 GrabberIcon.displayName = "GrabberIcon";
+HeartIcon.displayName = "HeartIcon";
 HistoryIcon.displayName = "HistoryIcon";
 HomeIcon.displayName = "HomeIcon";
 ItalicIcon.displayName = "ItalicIcon";
@@ -318,15 +358,20 @@ MoreHorizontalIcon.displayName = "MoreHorizontalIcon";
 MoreVerticalIcon.displayName = "MoreVerticalIcon";
 OptionIcon.displayName = "OptionIcon";
 PauseIcon.displayName = "PauseIcon";
+PinIcon.displayName = "PinIcon";
 PlayIcon.displayName = "PlayIcon";
 PlusIcon.displayName = "PlusIcon";
+RepeatIcon.displayName = "RepeatIcon";
 SearchIcon.displayName = "SearchIcon";
+SendIcon.displayName = "SendIcon";
 SettingsIcon.displayName = "SettingsIcon";
+ShareIcon.displayName = "ShareIcon";
 ShiftIcon.displayName = "ShiftIcon";
 SpacebarIcon.displayName = "SpacebarIcon";
 SparkleCentralIcon.displayName = "SparkleCentralIcon";
 SparkleIcon.displayName = "SparkleIcon";
 SunIcon.displayName = "SunIcon";
+ThumbsUpIcon.displayName = "ThumbsUpIcon";
 TrashIcon.displayName = "TrashIcon";
 TriangleAlertIcon.displayName = "TriangleAlertIcon";
 UnderlineIcon.displayName = "UnderlineIcon";

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useLiveImpressions } from "@/lib/home/live-impressions";
 import type { HomeMetricKind } from "@/lib/home/types";
-import { RankedColumn, SAMPLE_CHANNELS } from "./home-ranked-lists";
+import { RankedColumn } from "./home-ranked-lists";
 import { PublishesTable } from "./publishes-table";
 
 export function CatalogPage({
@@ -14,6 +15,7 @@ export function CatalogPage({
   title: string;
   kind: "publishes" | "channels";
 }) {
+  const live = useLiveImpressions();
   const [metric, setMetric] = useState<HomeMetricKind>("impressions");
 
   return (
@@ -37,7 +39,7 @@ export function CatalogPage({
             <div className="rounded-[14px] bg-neutral-0">
               <RankedColumn
                 title="Channels"
-                items={SAMPLE_CHANNELS}
+                items={live.channels}
                 metric={metric}
                 onMetricChange={setMetric}
                 fallbackIcon="none"

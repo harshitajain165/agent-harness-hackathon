@@ -1,8 +1,11 @@
+export type ThinkingVariant = "steps" | "reasoning" | "search" | "coding";
+
 export type ThinkingStep = {
   id: string;
   label: string;
   detail?: string;
   status: "running" | "done";
+  href?: string;
 };
 
 export type ToolCall = {
@@ -79,7 +82,10 @@ export type VideoArtifact = {
 export type Artifact = RecordsArtifact | DiffArtifact | VideoArtifact;
 
 export type AgentEvent =
-  | { type: "thinking"; data: { label: string; steps?: ThinkingStep[] } }
+  | {
+      type: "thinking";
+      data: { label: string; variant?: ThinkingVariant; query?: string; steps?: ThinkingStep[] };
+    }
   | { type: "token"; data: { text: string } }
   | { type: "tool_call"; data: ToolCall }
   | { type: "tool_result"; data: ToolResult }

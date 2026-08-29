@@ -32,12 +32,66 @@ function lastUserText(req: ChatRequest): string {
 
 function intentOf(text: string) {
   const q = text.toLowerCase();
-  if (/\b(video|footage|studio)\b/.test(q)) return "video";
+  if (/\bslack\b/.test(q) || /\bpublish\b/.test(q)) return "approval";
+  if (/\b(video|footage|studio|film)\b/.test(q)) return "video";
   if (/\b(approv|confirm|sign off|archive|delete|off-?board)\b/.test(q)) return "approval";
   if (/\b(diff|edit|change|propose|rewrite|tighten)\b/.test(q)) return "diff";
   if (/\b(table|records?|list|show|grid|vendors?|suppliers?)\b/.test(q)) return "records";
   if (/\b(tool|run|call|search|look up|find|draft function|code)\b/.test(q)) return "tools";
   return "chat";
+}
+
+function approvalFor(text: string): ApprovalRequest {
+  const q = text.toLowerCase();
+  if (/\bslack\b/.test(q)) {
+    return {
+      id: crypto.randomUUID(),
+      title: "Send to Slack for approval",
+      message: "I’ll post this cut to Slack so the team can review it before it ships.",
+      questions: [
+        {
+          id: "channel",
+          prompt: "Which channel?",
+          type: "single",
+          options: ["#launches", "#product-marketing", "#design"],
+        },
+      ],
+    };
+  }
+  if (/\bpublish\b/.test(q)) {
+    return {
+      id: crypto.randomUUID(),
+      title: "Publish to channels",
+      message: "This will publish the video and draft copy to the selected channels.",
+      questions: [
+        {
+          id: "channels",
+          prompt: "Where should it go?",
+          type: "multi",
+          options: ["X", "LinkedIn", "YouTube"],
+        },
+      ],
+    };
+  }
+  return {
+    id: crypto.randomUUID(),
+    title: "Confirm this action",
+    message: "I need a few details before I apply this change.",
+    questions: [
+      {
+        id: "scope",
+        prompt: "What should I apply?",
+        type: "single",
+        options: ["This conversation only", "The live agent", "Save as a draft"],
+      },
+      {
+        id: "notify",
+        prompt: "Who should be notified?",
+        type: "multi",
+        options: ["Owner", "On-call", "No one"],
+      },
+    ],
+  };
 }
 
 function thinkingFor(intent: ReturnType<typeof intentOf>, text: string): ThinkingStep[] {
@@ -68,6 +122,7 @@ const SAMPLE_VIDEO: Artifact = {
   kind: "video",
   title: "Product walkthrough",
   durationMs: 48_000,
+  src: "/recommended/linear.mp4",
   clips: [
     { id: "intro", label: "Intro", startMs: 0, endMs: 8_000 },
     { id: "demo", label: "Demo", startMs: 8_000, endMs: 32_000 },
@@ -196,28 +251,14 @@ async function runLocalAgent(
   }
 
   if (intent === "approval") {
-    const approval: ApprovalRequest = {
-      id: crypto.randomUUID(),
-      title: "Confirm this action",
-      message: "I need a few details before I apply this change.",
-      questions: [
-        {
-          id: "scope",
-          prompt: "What should I apply?",
-          type: "single",
-          options: ["This conversation only", "The live agent", "Save as a draft"],
-        },
-        {
-          id: "notify",
-          prompt: "Who should be notified?",
-          type: "multi",
-          options: ["Owner", "On-call", "No one"],
-        },
-      ],
-    };
+    const approval = approvalFor(text);
     emit({ type: "confirmation_required", data: approval });
     await streamText(
-      "Before I continue, confirm the scope. Single-choice answers advance on their own; multi-select waits for continue.",
+      /\bslack\b/i.test(text)
+        ? "I’ll queue this cut for Slack. Confirm the channel and I’ll post it for review."
+        : /\bpublish\b/i.test(text)
+          ? "Publishing is gated. Pick the channels and confirm — nothing ships until you approve."
+          : "Before I continue, confirm the scope. Single-choice answers advance on their own; multi-select waits for continue.",
       emit
     );
     emit({ type: "done" });
