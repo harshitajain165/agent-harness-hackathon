@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 export type FollowUp = {
   id: string;
   label: string;
-  /** When set, the harness should `send()` this prompt. Export has no prompt. */
+  /** When set, the harness should `send()` this prompt. Export and publish have no prompt. */
   prompt?: string;
 };
 
@@ -21,7 +21,7 @@ export const VIDEO_FOLLOW_UPS: FollowUp[] = [
     prompt: "Send this video to Slack for approval",
   },
   { id: "export", label: "Export video" },
-  { id: "publish", label: "Publish to channels", prompt: "Publish to channels" },
+  { id: "publish", label: "Publish to channels" },
   { id: "voiceover", label: "Rewrite the voiceover", prompt: "Rewrite the voiceover" },
 ];
 

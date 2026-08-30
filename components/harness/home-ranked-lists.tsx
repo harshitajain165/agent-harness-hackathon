@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDownIcon, PlayIcon } from "@/components/icons";
+import { ChevronDownIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { publishThumb } from "@/lib/home/publishes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,6 +111,17 @@ function MetricMenu({
 }
 
 function RowIcon({ item, fallback }: { item: HomeRankedItem; fallback: "play" | "none" }) {
+  if (fallback === "play") {
+    return (
+      <img
+        src={publishThumb(item.id)}
+        alt=""
+        width={32}
+        height={20}
+        className="h-5 w-8 shrink-0 rounded-[6px] bg-neutral-100 object-cover"
+      />
+    );
+  }
   if (item.icon) {
     return (
       <img
@@ -120,9 +132,6 @@ function RowIcon({ item, fallback }: { item: HomeRankedItem; fallback: "play" | 
         className="size-4 shrink-0 rounded-[3px] object-cover"
       />
     );
-  }
-  if (fallback === "play") {
-    return <PlayIcon className="size-4 shrink-0 text-fg-tertiary" />;
   }
   return null;
 }
@@ -186,7 +195,7 @@ export function RankedColumn({
                   />
                   <div className="relative flex h-9 min-w-0 items-center gap-2 px-2.5">
                     <RowIcon item={item} fallback={fallbackIcon} />
-                    <Text as="span" size="sm" className="truncate">
+                    <Text as="span" size="sm" weight="medium" className="truncate">
                       {item.label}
                     </Text>
                   </div>

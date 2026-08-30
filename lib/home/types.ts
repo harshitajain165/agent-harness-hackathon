@@ -24,7 +24,6 @@ export type HomeRankedItem = {
 };
 
 export type HomeDashboardProps = {
-  greetingName?: string;
   period?: HomePeriod;
   onPeriodChange?: (period: HomePeriod) => void;
   metrics?: HomeMetrics;
